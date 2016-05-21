@@ -20,6 +20,6 @@ I know, it's too LOL wanting PHP coding without $ sign on its variable name. But
 
 | No. | Varrefvals code | PHP code |
 |:---:|:---:|:---:|
-| 1 | `var counter;<br>counter = 1;` | `<br>$counter = 1;` |
+| 1 | `var counter; counter = 1;` | `$counter = 1;` |
 
 
