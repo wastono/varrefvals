@@ -13,5 +13,13 @@ I know, it's too LOL wanting PHP coding without $ sign on its variable name. But
 5. Use `vals` keyword to set variables accessed by value.
 6. Use `this` keyword to access own object properties or methods.
 7. Set alias variables to write superglobal variables.
-8. Use dot operator to access every method or property, static or not.
-9. Use colon for associative arrays.
+8. Use `.` operator to access every method or property, static or not.
+9. Use `:` for associative arrays.
+
+## Conversion
+
+| No. | Varrefvals code | PHP code |
+|:---:|:---:|:---:|
+| 1 | `var counter;<br>counter = 1;` | `<br>$counter = 1;` |
+
+
