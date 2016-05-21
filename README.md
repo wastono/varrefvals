@@ -14,7 +14,7 @@ I know, it's too LOL wanting PHP coding without $ sign on its variable name. But
 6. Use `this` keyword to access own object properties or methods.
 7. Set alias variables to write superglobal variables.
 8. Use `.` operator to access every method or property, static or not.
-9. Use `:` for associative arrays.
+9. Use `:` operator for associative arrays.
 
 ## Conversion
 
@@ -55,3 +55,15 @@ I know, it's too LOL wanting PHP coding without $ sign on its variable name. But
 | 33 | `parent.method(); parent.property = 2; var b = parent.Constant;` | `parent::method(); parent::$property = 2; $b = parent::Constant;` |
 | 34 | `static.method(); static.property = 3; var c = static.Constant;` | `static::method(); static::$property = 3; $c = static::Constant;` |
 | 35 | `// File is saved as filename.var` | `// File is saved as filename.php` |
+
+## Implementation
+
+Variable detection does not consider the variable scope rule. If the same name is used as variable, it will be just replaced.
+
+In class declaration, capitalize the first character of constant name. Do not capitalize the first character of property name. Use round brackets for method detection. Do not use keyword for variable name. Any other structures, operators, names, or keywords are written and used as normal PHP code.
+
+Code is written and saved on file with .var extension. Varrefvals code compiler will create or overwrite .php file with the same name.
+
+Varrefvals code compiler is written in PHP code. It is saved as varrefvals.php. It is executed from command line. It needs file name argument. If left empty, all .var files inside folder will be compiled into .php, recursively.
+
+There is no error handling when compiling. There are two possibilities: syntax error or false detection. Please try to write simple testing code and see what is resulted. You still need to understand PHP code after all. You may send me error code for debugging.
