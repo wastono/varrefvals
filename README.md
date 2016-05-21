@@ -54,4 +54,4 @@ I know, it's too LOL wanting PHP coding without $ sign on its variable name. But
 | 32 | `self.method(); self.property = 1; var a = self.Constant;` | `self::method(); self::$property = 1; $a = self::Constant;` |
 | 33 | `parent.method(); parent.property = 2; var b = parent.Constant;` | `parent::method(); parent::$property = 2; $b = parent::Constant;` |
 | 34 | `static.method(); static.property = 3; var c = static.Constant;` | `static::method(); static::$property = 3; $c = static::Constant;` |
-| 35 | *File is saved as filename.var* | *File is saved as filename.php* |
+| 35 | `// File is saved as filename.var` | `// File is saved as filename.php` |
