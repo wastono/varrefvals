@@ -62,8 +62,28 @@ Variable detection does not consider the variable scope rule. If the same name i
 
 In class declaration, capitalize the first character of constant name. Do not capitalize the first character of property name. Use round brackets for method detection. Do not use keyword for variable name. Any other structures, operators, names, or keywords are written and used as normal PHP code.
 
-Code is written and saved on file with .var extension. Varrefvals code compiler will create or overwrite .php file with the same name.
+Code is written and saved on file with **.var** extension. Varrefvals code compiler will create or overwrite **.php** file with the same name.
 
-Varrefvals code compiler is written in PHP code. It is saved as varrefvals.php. It is executed from command line. It needs file name argument. If left empty, all .var files inside folder will be compiled into .php, recursively.
+Varrefvals code compiler is written in PHP code. It is saved as **varrefvals.php**. It is executed from command line. It needs file name argument. If left empty, all **.var** files inside folder will be compiled into **.php**, recursively.
 
 There is no error handling when compiling. There are two possibilities: syntax error or false detection. Please try to write simple testing code and see what is resulted. You still need to understand PHP code after all. You may send me error code for debugging.
+
+## License
+
+```
+	Varrefvals. Simple code compiler of no $ sign code to PHP code.
+    Copyright (C) 2016 Wastono
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+```
