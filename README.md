@@ -86,6 +86,8 @@ Fill empty file name parameter for compiling all **.var** files inside current d
 	> php -f path/to/varrefvals.php -- ""
 ```
 
+You can bind the execution with `ctrl + s` or else on your favorite code editor.
+
 ## License
 
 ```
