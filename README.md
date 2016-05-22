@@ -79,6 +79,13 @@ Execute **varrefvals.php** with optional file name parameter. Do something like 
 
 It will create *file.php* in *path/to/var/file* directory.
 
+Fill empty file name parameter for compiling all **.var** files inside current directory, recursively:
+
+```
+	> cd path/to/var/file
+	> php -f path/to/varrefvals.php -- ""
+```
+
 ## License
 
 ```
