@@ -1,18 +1,18 @@
 # Varrefvals
 
-I know, it's too LOL wanting PHP coding without $ sign on its variable name. But, writing code with $ sign on every variable is adding typing complexity, for me. I wish I could do coding using simple syntax only. So I decided to design and write simple script that can be used for compiling no $ sign code into normal PHP code.
+I know, it's too *LOL* wanting PHP coding without `$` sign on its variable name. But, writing code with `$` sign on every variable is adding typing complexity, for me. I wish I could do coding using simple syntax only. So I decided to design and write simple script that can be used for compiling no `$` sign code into normal PHP code.
 
 **Varrefvals**, that's the name that I use for this script. It comes from 3 selected keywords: `var`, `ref`, and `vals`. `var` keyword is used as direct variable declaration. `ref` keyword is used for setting variable accessed by reference. `vals` keyword is used for setting variables accessed by value.
 
 ## Coding Specification
 
 1. Use `var` keyword for direct variable declaration.
-2. Detect variable declaration from keywords: `global`, `static`, `public`, `private`, `protected`, `for`, `foreach`, `list`, `catch`, `function`
+2. Detect variable declaration from keywords: `global`, `static`, `public`, `private`, `protected`, `for`, `foreach`, `list`, `catch`, `function`, `use`.
 3. Use `ref` keyword to set variable accessed by reference.
 4. Use `refs` keyword to set variables accessed by reference.
 5. Use `vals` keyword to set variables accessed by value.
 6. Use `this` keyword to access own object properties or methods.
-7. Set alias variables to write superglobal variables.
+7. Set alias variables to write *superglobal* variables.
 8. Use `.` operator to access every method or property, static or not.
 9. Use `:` operator for associative arrays.
 
@@ -67,6 +67,17 @@ Code is written and saved on file with **.var** extension. Varrefvals code compi
 Varrefvals code compiler is written in PHP code. It is saved as **varrefvals.php**. It is executed from command line. It needs file name argument. If left empty, all **.var** files inside folder will be compiled into **.php**, recursively.
 
 There is no error handling when compiling. There are two possibilities: syntax error or false detection. Please try to write simple testing code and see what is resulted. You still need to understand PHP code after all. You may send me error code for debugging.
+
+## Usage
+
+Execute **varrefvals.php** with optional file name parameter. Do something like this:
+
+```
+	> cd path/to/var/file
+	> php -f path/to/varrefvals.php -- "file.var"
+```
+
+It will create *file.php* in *path/to/var/file* directory.
 
 ## License
 
