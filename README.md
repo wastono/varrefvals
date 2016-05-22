@@ -91,7 +91,7 @@ You can bind the execution with `ctrl + s` or else on your favorite code editor.
 ## License
 
 ```
-	Varrefvals. Simple code compiler of no $ sign code to PHP code.
+	Varrefvals. Simple code compiler of no $ sign for PHP.
     Copyright (C) 2016 Wastono
 
     This program is free software: you can redistribute it and/or modify
