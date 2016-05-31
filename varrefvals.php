@@ -271,11 +271,14 @@ function var2php($path)
 	$file = preg_replace('/('.$casting.')_C__t__G_/', '($1)', $file);
 	
 	//	replace colon for associative arrays
-	preg_match_all('/[,\[\(]\s*([-]?\s*\d+|<\w+>)\s*:|as\s+\$\w+\s*:/', $file, $match);
+	preg_match_all('/[,\[\(]\s*([-]?\s*\d+|<\w+>|[$]?\w+|([$]?\w+(::|->)[$]?\w+(|\([$,\s\w]*\)))+)\s*:(?!:)|as\s+\$\w+\s*:/', $file, $match);
 	if ((bool)$match[0])
 	{
 		$match = array_values(array_unique($match[0]));
-		$match2 = str_replace(':', '=>', $match);
+		
+		print_r($match);
+		
+		$match2 = str_replace([':','=>=>'], ['=>','::'], $match);
 		$file = str_replace($match, $match2, $file);
 	}
 	
