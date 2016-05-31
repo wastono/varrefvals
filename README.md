@@ -54,7 +54,9 @@ I know, it's too *LOL* wanting PHP coding without `$` sign on its variable name.
 | 32 | `self.method(); self.property = 1; var a = self.Constant;` | `self::method(); self::$property = 1; $a = self::Constant;` |
 | 33 | `parent.method(); parent.property = 2; var b = parent.Constant;` | `parent::method(); parent::$property = 2; $b = parent::Constant;` |
 | 34 | `static.method(); static.property = 3; var c = static.Constant;` | `static::method(); static::$property = 3; $c = static::Constant;` |
-| 35 | `// File is saved as filename.var` | `// File is saved as filename.php` |
+| 35 | `var z = 1; var a = array(z : 'o'); var a = [z : 'one'];` | `$z = 1; $a = array($z => 'o'); $a = [$z => 'one'];` |
+| 36 | `var a = array(className.Constant : 'o'); var a = [className.Constant : 'one'];` | `$a = array(className::Constant => 'o'); $a = [className::Constant => 'one'];` |
+| 37 | `// filename.var is compiled into filename.php` | `// filename.var is compiled into filename.php` |
 
 ## Implementation
 
