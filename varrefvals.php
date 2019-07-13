@@ -3,7 +3,7 @@
 /*
 
     Varrefvals. Simple code compiler of no $ sign for PHP.
-    Copyright (C) 2016 Wastono
+    Copyright (C) 2016 - 2018 Wastono
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
@@ -21,12 +21,12 @@
 */
 
 ob_implicit_flush(true);
-echo "\n	Varrefvals (c) 2016 Wastono.\n";
+echo "\n	Varrefvals (c) 2016 - 2018 Wastono.\n";
 
 //	check file extension
 if( $argv[1] == 'varrefvals.php' ) return;	//	skip varrefvals.php
 
-if(preg_match('/.*\.php/i', $argv[1]))		//	execute .php file
+if(preg_match('/.*?\.php$/i', $argv[1]))		//	execute .php file
 {
 	echo "\n	Executing $argv[1]...\n\n";
 	include $argv[1];
@@ -38,7 +38,7 @@ if ($argv[1] == '')	//	empty argument: find all .var file, recursively
 	$dir = getcwd();
 	foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir)) as $file)
 	{
-		if (preg_match('/.*\.var/i', $file) && !is_dir($file))
+		if (preg_match('/.*?\.var$/i', $file) && !is_dir($file))
 		{
 			var2php($file);		// create .php file from .var file
 		}
@@ -62,9 +62,42 @@ function echoMessage($text)
 	echo "\n	", $now->format('Y-m-d H:i:s.u'), " : $text";
 }
 
+function maxi ($carry, $item)
+{
+	if (!isset($carry) || $carry == '') $carry = 0;
+	
+	$count = substr_count($item, '|');
+	if ($count > $carry) $carry = $count;
+	return $carry;
+}
+
+function mapping ($item)
+{
+	global $max;
+	$delta = $max - substr_count($item, '|');
+	$ad = '';
+	$default = explode('|', $item)[0];
+	
+	for ($i = $delta - 1; $i >= 0; $i--) { $ad .= ',' . $default; }
+	return "\t\t[". str_replace('|', $item[0] . ',' . $item[0], $item) . $ad . "],\r\n";
+}
+
+function klas ($item)
+{
+	global $rslt1;
+	return $item . $rslt1;
+}
+
+function kode1 ($item) { return 't' . $item; }
+function kode2 (&$item, $key)
+{
+	global $unik2;
+	$unik2[] = '$this->t_r('. $key .')';
+}
+
 function var2php($path)
 {
-	echoMessage('start');
+	echoMessage('start ' . $path);
 	
 	//	check file
 	if (!file_exists($path))
@@ -78,7 +111,10 @@ function var2php($path)
 	
 	//	find all html parts
 	$part = array();
-	preg_match_all('/(?<=\?>).*(?=<\?)/s', $file, $html);
+	preg_match_all('/^(?!<\?).+?(?=<\?)|(?<=\?>).*?(?=<\?)|(?<=\?>).+?$/s', $file, $html);
+	
+	//var_dump($html); return;
+	
 	if ((bool)$html[0])
 	{
 		$html = array_values(array_unique($html[0]));
@@ -92,9 +128,76 @@ function var2php($path)
 		$file = str_replace($html, $part, $file);
 	}
 	
+	//	------------------------------------------------------------------------
+	//	Translator
+	//	------------------------------------------------------------------------
+	
+	//	t'What is this?|Apakah ini?'
+	$rslt = '';
+	preg_match_all('/(?<=\bt)(["\'])(?:\\\\.|[^"\'])+?\1/', $file, $rslt);
+	
+	//var_dump($file);
+	//echo "\n\n"; var_dump($rslt); return;
+	
+	global $rslt1;
+	$rslt1 = '';
+	$unik = [];
+	
+	if ((bool)$rslt[0])
+	{
+		$rslt1 = array_values(array_unique($rslt[0]));
+		$unik = $rslt1;
+		
+		global $max;
+		$max = 0;
+		if ((bool)$rslt1)
+		{
+			$max = array_reduce($rslt1, "maxi");
+			
+			$rslt1 = "\r\n\tprivate \$t_l;\r\n\tprivate \$t_c;\r\n\tprivate \$t_d = [\r\n" .
+				implode('', array_map("mapping", $rslt1)) .
+				"\t];\r\n\tprivate function t_r (\$k) { return \$this->t_d[\$k][\$this->t_c]; }\r\n";
+		}
+	}
+	
+	//	pasang sisipan di dalam class
+	$rslt2 = '';
+	preg_match_all('/\bclass\b\s+[^{]+\{/', $file, $rslt2);
+	
+	if ((bool)$rslt2[0] && $rslt1 != '')
+	{
+		$rslt3 = array_map("klas", $rslt2[0]);
+		$file = str_replace($rslt2[0], $rslt3, $file);
+	}
+	
+	global $unik2;
+	if ((bool)$unik)
+	{
+		$unik1 = array_map("kode1", $unik);
+		$unik2 = [];
+		
+		array_walk($unik1, 'kode2');
+		$file = str_replace($unik1, $unik2, $file);
+	}
+	
+	//	tr(['en', 'id'], language); tl()
+	
+	$file = preg_replace([
+		'/\btr\s*\(\s*(\[[^]]+])\s*,\s*([^;]+)\s*\)\s*;/',
+		'/\btl\s*\(\s*\)/',
+	],[
+		"\$this->t_l = \${1};\r\n\t\t\$t_c = array_search(strtolower(\${2}), \$this->t_l);\r\n\t\t\$this->t_c = (\$t_c === false) ? 0 : \$t_c;\r\n\t\t\$this->t_l = \$this->t_l[\$this->t_c];",
+		'$this->t_l',
+	],
+	$file);
+	
+	//	------------------------------------------------------------------------
+	//	String Literal & Comments
+	//	------------------------------------------------------------------------
+	
 	//	find all string literals & comments
 	$coarr = array();
-	preg_match_all('~"(?:\\\\.|[^\\\\"])*"|\'(?:\\\\.|[^\\\\\'])*\'|(?:#|//)[^\r\n]*|/\*[\s\S]*?\*/~', $file, $comment);
+	preg_match_all('~\'\'|""|(\'|").*?(?:[^\\\\]|(?<=[^\\\\])(?:\\\\\\\\)+)\1|(?:#|//)[^\r\n]*|/\*[\s\S]*?\*/~', $file, $comment);
 	if ((bool)$comment[0])
 	{
 		$comment = array_values(array_unique($comment[0]));
@@ -267,6 +370,10 @@ function var2php($path)
 		}
 	}
 	
+	//	replace shortcut of empty object variable declaration: {} into (object)[]
+	//$file = preg_replace('/=\s*{}/', '= (object)[]', $file);
+	$file = preg_replace('/=\s*{}/', '= new stdClass', $file);
+	
 	//	restore casting
 	$file = preg_replace('/('.$casting.')_C__t__G_/', '($1)', $file);
 	
@@ -289,5 +396,5 @@ function var2php($path)
 	$name = str_replace('.var', '.php', $path);
 	file_put_contents( $name , $file);
 	
-	echoMessage("write $name.\n");
+	echoMessage("write $name\n");
 }
