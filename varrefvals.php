@@ -62,7 +62,9 @@ class Varrefvals
 	
 	private const CommentEscape = '(?:(?:#|//|/\*)A_\d+_\*?/?|\s)*';
 	private const CodeEscape = '(?!\bA_\d+_\b|\bX_\w+_\b|\bvals\b|\brefs?\b)';
-	private const CodeEscape2 = '(?!\d+|\b(?:final|abstract|class|interface|trait|function|const|return|goto|global|echo|die|require|require_once|include|include_once|new|clone|throw|use|var|public|private|protected|static|yield|vals|refs?|A_\d+_|X_\w+_)\b)';
+	private const CodeEscape2 = '(?!\d+|\b(?:else|if|final|abstract|class|interface|trait|function|const|return|goto|global|echo|die|require|require_once|include|include_once|new|clone|throw|use|var|public|private|protected|static|yield|vals|refs?|A_\d+_|X_\w+_)\b)';
+	
+	private const PhpClosingTag = '?' . '>';
 	
 	public $package;
 	
@@ -85,7 +87,7 @@ class Varrefvals
 		{
 			//	check file
 			//	skip varrefvals.php
-			if( $file == 'varrefvals.php' )
+			if ($file == 'varrefvals.php')
 			{
 				$this->message("skip varrefvals.php file.\n\n");
 				return;
@@ -116,7 +118,7 @@ class Varrefvals
 			}
 			
 			//	non empty argument: check .var file extension
-			if(!preg_match('/.*?\.var$/i', $file))
+			if (!preg_match('/.*?\.var$/i', $file))
 			{
 				$this->message($file);
 				$this->message("Please provide .var or .php file only.\n");
@@ -237,7 +239,7 @@ class Varrefvals
 	public function restoreIsolatedPart (&$file)
 	{
 		$selector = '(\w+)';
-		$file = preg_replace('~(?>\b' . $this->package->isolateText($selector) . '\b)~', '$1', $file);
+		$file = preg_replace('~(' . self::PhpClosingTag . '\b' . $this->package->isolateText($selector) . '\b)~', '$1', $file);
 		if ($this->package->alias) $file = str_replace($this->package->alias, $this->package->part, $file);
 	}
 	
@@ -252,14 +254,30 @@ class Varrefvals
 			//											  		  1										         2					 2
 			
 			//	return, yield from, = function () {};
-			str_replace('\s*', self::CommentEscape,
-			'~(?:\breturn\b|\byield\b\s\s*\bfrom\b|[^-+/*.%&|<>!=?^]=)\s*(?:\bstatic\b)?\s*\bfunction\b\s*(?:\bref\b|&)?\s*(\((?:(?>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))\s*:?\s*\w*\s*(\{(?:(?>[^{}]+)|(?-1))*\})\K(?=\s*(;?))~'),
-			//																																	1													2					   3  
+			str_replace(
+			[
+				'\s*',
+				'?_>',
+			],
+			[
+				self::CommentEscape,
+				self::PhpClosingTag,
+			],
+			'~(?:\breturn\b|\byield\b\s\s*\bfrom\b|[^-+/*.%&|<>!=?^]=)\s*(?:\bstatic\b)?\s*\bfunction\b\s*(?:\bref\b|&)?\s*(\((?:(?_>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))\s*:?\s*\w*\s*(\{(?:(?_>[^{}]+)|(?-1))*\})\K(?=\s*(;?))~'),
+			//																																	1													2					    3  
 			
 			//	expression ; \r\n expression			include bug: expression ; }
-			str_replace('\s*', self::CommentEscape,
-			'~(?|(?<!//|#)(?!\b(?i:' . self::Reserved . '|A_\d+_)\b)\$?\b\w+\b()|(?<=->|::)\bclass\b()|[\])\'"`]()|(?:->|::)\s*(\{(?:(?>[^{}]+)|(?-1))*\})|\+\+()|--())\K(?=(?|\s*(;?)()()\s*(?:\?>|\}|$)|[ \t]*(;?)[ \t]*(?:(?://|/\*|#)A_\d+_\*?/?)?[ \t]*(;?)()[ \t]*[\r\n]\s*(?:[\'"`$]|\+\+|--|(?!\b(?:as|instanceof|insteadof|and|x?or)\b)\$?\b\w+\b|(\[(?:(?>[^\[\]]+)|(?-1))*\])\s*=|(\((?:(?>[^()]+)|(?-1))*\))\s*(?:->|::|\())))~'),
-			//															  1			 			1			1								1			   1	1			   2  3 4						 2											 3  4
+			str_replace(
+			[
+				'\s*',
+				'?_>',
+			],
+			[
+				self::CommentEscape,
+				self::PhpClosingTag,
+			],
+			'~(?|(?<!//|#)(?!\b(?i:' . str_replace(['|null|', '|true|', '|false|'], '|', self::Reserved) . '|A_\d+_)\b)\$?\b\w+\b()|(?<=->|::)\bclass\b()|[\])\'"`]()|(?:->|::)\s*(\{(?:(?_>[^{}]+)|(?-1))*\})|\+\+()|--())\K(?=(?|\s*(;?)()()\s*(?:\?_>|\}|$)|[ \t]*(;?)[ \t]*(?:(?://|/\*|#)A_\d+_\*?/?)?[ \t]*(;?)()[ \t]*[\r\n]\s*(?:[\'"`$]|\+\+|--|(?!\b(?:as|instanceof|insteadof|and|x?or)\b)\$?\b\w+\b|(\[(?:(?_>[^\[\]]+)|(?-1))*\])\s*=|(\((?:(?_>[^()]+)|(?-1))*\))\s*(?:->|::|\())))~'),
+			//																													1			 		  1			  1								1				  1    1			  2  3 4						 2											 3  4
 			
 			//	remove bug:	->{expression ; }	::{expression ; }
 			str_replace('\s*', self::CommentEscape,
@@ -415,13 +433,15 @@ class Varrefvals
 			[
 				'\s*',
 				'\c*',
+				'?_>',
 			],
 			[
 				self::CommentEscape,
 				self::CodeEscape,
+				self::PhpClosingTag,
 			],
-			'~((?:\b(?:A_\d+_|X_\w+_)\b[ \t]+|\bconst\b|\bdeclare\b\s*\(\s*)?)(\s*)((?<!->|\.|::)\$?)(\c*\b\w+\b)([ \t]*(\[(?:(?>[^\[\]]+)|(?-1))*\])?)(\s*(?:[-%|+/&.^]|\*\*?|>>|<<|\?\?)?[=])(?![=>])~'),
-			//                  1                                                 2          3               4       5                6                              7              
+			'~((?:\b(?:A_\d+_|X_\w+_)\b[ \t]+|\bconst\b|\bdeclare\b\s*\(\s*)?)(\s*)((?<!->|\.|::)\$?)(\c*\b\w+\b)([ \t]*(\[(?:(?_>[^\[\]]+)|(?-1))*\])?)(\s*(?:[-%|+/&.^]|\*\*?|>>|<<|\?\?)?[=])(?![=>])~'),
+			//                  1                                               2          3               4       5                6                              7              
 		],
 		function ($match)
 		{
@@ -503,9 +523,17 @@ class Varrefvals
 	{
 		$file = preg_replace_callback(
 		[
-			str_replace('\s*', self::CommentEscape,
-			'~\blist\b\s*\K(\((?:(?>[^()]+)|(?-1))*\))|\bas\b\s*\K(\[(?:(?>[^\[\]]+)|(?-1))*\])|(\[(?:(?>[^\[\]]+)|(?-1))*\])(?=\s*=)~'),
-			//                         1              |               1                        |                       1              
+			str_replace(
+			[
+				'\s*',
+				'?_>',
+			],
+			[
+				self::CommentEscape,
+				self::PhpClosingTag,
+			],
+			'~\blist\b\s*\K(\((?:(?_>[^()]+)|(?-1))*\))|\bas\b\s*\K(\[(?:(?_>[^\[\]]+)|(?-1))*\])|(\[(?:(?_>[^\[\]]+)|(?-1))*\])(?=\s*=)~'),
+			//                         1               |               1                         |                       1              
 		],
 		function ($match)
 		{
@@ -548,17 +576,17 @@ class Varrefvals
 			//	global
 			'~(?|()(\bglobal\b[ \t]+)()()()(\$?\b\w+\b(?:\s*,\s*\b\w+\b)*)((?:\s*;)?)'
 			//   1       2           3 4 5   6                                   7   
-			//        keyword                $name         , buntut              ;   
+			//        keyword                $name         , tail                ;   
 			
 			//	properties, variable declaration
 			. '|()(\b(?:var|public|private|protected|static)\b[ \t]+(?:\b(?:public|private|protected|static)\b[ \t]+)?)(\??[ \t]*)((?:[\\\\]?\c*\b[\w\\\\]+\b)?)([ \t]*)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;\r\n]*)*)((?:\s*;)?)'
 			//  1        2                                                                                                3                         4              5      6                                            7   
-			//        keyword                                                                                             ?                       type                    $name          , buntut                      ;
+			//        keyword                                                                                             ?                       type                    $name          , tail                        ;
 			
 			//	bare properties
 			. '|((?:(?:\S\s*)?[\r\n]+|[\r\n{};])[ \t]*)()(\??[ \t]*)([\\\\]?\c*\b[\w\\\\]+\b)([ \t]+)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;\r\n]*)*)((?:\s*;)?))~'
 			//          1                              2    3                      4             5     6                                            7     
-			//         cek                                  ?                    type                  $name   , buntut                             ;      
+			//        check                                 ?                    type                  $name   , tail                               ;      
 			),	
 		],
 		function ($match)
@@ -567,16 +595,26 @@ class Varrefvals
 			if (substr($match[2], 0, 3) == 'var' && $match[4] === '') $match[2] = ltrim(substr($match[2], 3));
 			$match[4] = $this->package->isolatePart($match[4]);
 			
-			//	meletakkan tanda ;
+			//	put ; sign
 			$match[6] = preg_replace('~('. self::CommentEscape . ')_REPLACED$~', ';$1', $match[6] . '_REPLACED');
 			
-			//	+ bagian $nama + buntut setelah awal property declaration
+			//	$name + tail after first property declaration
 			$match[6] = preg_replace_callback(
 			[
-				str_replace('\s*', self::CommentEscape,
-				'~(^|\s*,\s*)(\$?)(\b\w+\b)((?:\s*=\s*(\[(?:(?>[^\[\]]+)|(?-1))*\])?(?>(?:\b\w+\b\s*)+(\((?:(?>[^()]+)|(?-1))*\)))?[^,\r\n]*)?)~'),
-				//	    1      2      3        4                       5                                            6
-				//      ,      $    nama     buntut
+				str_replace(
+				[
+					'\s*',
+					'\c*',
+					'?_>',
+				],
+				[
+					self::CommentEscape,
+					self::CodeEscape2,
+					self::PhpClosingTag,
+				],
+				'~(^|\s*,\s*)(\$?)(\b\c*\w+\b)((?:\s*=\s*(\[(?:(?_>[^\[\]]+)|(?-1))*\])?(?_>(?:\b\c*\w+\b\s*)+(\((?:(?_>[^()]+)|(?-1))*\)))?[^,\r\n]*)?)~'),
+				//	    1      2      3          4                       5                                            6
+				//      ,      $    name       tile  
 			],
 			function ($found)
 			{
@@ -619,14 +657,16 @@ class Varrefvals
 			[
 				'\s*',
 				'\c*',
+				'?_>',
 			],
 			[
 				self::CommentEscape,
 				self::CodeEscape2,
+				self::PhpClosingTag,
 			]
-			, '~(?>(\bf(?:unctio)?n\b)(\s*)((?:\bref\b|&)?)(\s*)((?:\c*\b(?>\w+)\b)?)(\s*)(\((?:(?>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))([ \t]*)(:?)([ \t]*)(\??)([ \t]*)((?:\c*(?>[\w\\\\]+))?)(\s*)([{;:=]?))~'),
-			//			   1            2          3         4               5         6                7                                8      9      10    11    12             13           14     15
-			//			   fn                      &                        name                     argument                                   :            ?                   type               buntut
+			, '~(?_>(\bf(?:unctio)?n\b)(\s*)((?:\bref\b|&)?)(\s*)((?:\c*\b(?_>\w+)\b)?)(\s*)(\((?:(?_>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))([ \t]*)(:?)([ \t]*)(\??)([ \t]*)((?:\c*(?_>[\w\\\\]+))?)(\s*)([{;:=]?))~'),
+			//			   1             2          3         4               5          6                7                                 8      9      10    11    12             13              14     15
+			//			   fn                       &                        name                      argument                                    :            ?                   type                   tail
 		],
 		function ($match)
 		{
@@ -637,14 +677,16 @@ class Varrefvals
 				[
 					'\s*',
 					'\c*',
+					'?_>',
 				],
 				[
 					self::CommentEscape,
 					self::CodeEscape,
+					self::PhpClosingTag,
 				]
-				, '~(?>([\(,]\s*\??\s*)((?>\c*[\w\\\\]+)?)(\s*&?\s*)((?:\bvals\b|\brefs?\b)?)(\s*[.]*\s*)(\$?)(\c*\b\w+\b)(\s*=?\s*(\[(?:(?>[^\[\]]+)|(?-1))*\])?(?>(?:\b\w+\b\s*)+(\((?:(?>[^()]+)|(?-1))*\)))?(?>[^,\)]+)?))(?=$|[,\)])~'),
-				//             1                2              3                4                  5       6        7          8                  9                                           10
-				//       (,    ?              type             &               ref                ...      $       name      buntut
+				, '~(?_>([\(,]\s*\??\s*)((?_>\c*[\w\\\\]+)?)(\s*&?\s*)((?:\bvals\b|\brefs?\b)?)(\s*[.]*\s*)(\$?)(\c*\b\w+\b)(\s*=?\s*(\[(?:(?_>[^\[\]]+)|(?-1))*\])?(?_>(?:\b\w+\b\s*)+(\((?:(?_>[^()]+)|(?-1))*\)))?(?_>[^,\)]+)?))(?=$|[,\)])~'),
+				//             1                2              3                4                  5         6        7          8                  9                                           10
+				//       (,    ?              type             &               ref                ...        $       name       tail
 			],
 			function ($found)
 			{
@@ -675,7 +717,7 @@ class Varrefvals
 			{
 				if ($match[13])	//	return type
 				{
-					if ($match[15] == ':')	//	buntut
+					if ($match[15] == ':')	//	tail
 					{
 						$isolateReturnType = true;
 						$match[15] = '=>';
@@ -722,10 +764,18 @@ class Varrefvals
 		$file = preg_replace_callback(
 		[
 			//	class (extends, implements) n use for namespace
-			str_replace('\s*', self::CommentEscape,
-			'~(?|\s\K(\bclass\b)(\s\s*)([^{]+)(\{(?:(?>[^{}]+)|(?-1))*\})|\s\K(\buse\b)(\s*)((?:\s*,?\s*(?!\()[\w\\\\]+)+)(\s*)((?:\{[^}]+\})?)(\s*)(;?))~'),
-			//            1        2      3              4               |        1      2               3                  4       5            6   7    
-			//			class            name          body              |       use                    name                       item              ;    
+			str_replace(
+			[
+				'\s*',
+				'?_>',
+			],
+			[
+				self::CommentEscape,
+				self::PhpClosingTag,
+			],
+			'~(?|\s\K(\bclass\b)(\s\s*)([^{]+)(\{(?:(?_>[^{}]+)|(?-1))*\})|\s\K(\buse\b)(\s*)((?:\s*,?\s*(?!\()[\w\\\\]+)+)(\s*)((?:\{[^}]+\})?)(\s*)(;?))~'),
+			//            1        2      3               4               |        1      2               3                  4       5            6   7    
+			//			class            name           body              |       use                    name                       item              ;    
 		],
 		function ($match)
 		{
@@ -734,10 +784,18 @@ class Varrefvals
 				$match[4] = preg_replace_callback(
 				[
 					//	use in class for trait related
-					str_replace('\s*', self::CommentEscape,
-					'~(?>\s\buse\b\s*)\K((?>\s*,?\s*(?!\()\b\w+\b)+)(\s*)(;?)((?>\{[^}]+\})?)~'),
-					//					              1               2   3          4
-					//							     name                 ;         item
+					str_replace(
+					[
+						'\s*', 
+						'?_>',
+					],
+					[
+						self::CommentEscape,
+						self::PhpClosingTag,
+					],
+					'~(?_>\s\buse\b\s*)\K((?_>\s*,?\s*(?!\()\b\w+\b)+)(\s*)(;?)((?_>\{[^}]+\})?)~'),
+					//					                1               2   3          4
+					//							       name                 ;         item
 				],
 				function ($found)
 				{
@@ -748,10 +806,18 @@ class Varrefvals
 					else $found[4] = preg_replace_callback(
 					[
 						//	trait item part
-						str_replace('\s*', self::CommentEscape,
-						'~(?>\{?\s*)\K((?>\b[\w:.]+\b))(\s\s*)((?>\b\w+\b\s*,?\s*)+)(;?)~'),
-						//					  1		          2           3                     4
-						//					nama                        nama                    ;
+						str_replace(
+						[
+							'\s*',
+							'?_>',
+						],
+						[
+							self::CommentEscape,
+							self::PhpClosingTag,
+						],
+						'~(?_>\{?\s*)\K((?_>\b[\w:.]+\b))(\s\s*)((?_>\b\w+\b\s*,?\s*)+)(;?)~'),
+						//					  1		        2           3               4
+						//					name                      name              ;
 					],
 					function ($got)
 					{
@@ -836,8 +902,7 @@ class Varrefvals
 	{
 		$file = preg_replace_callback(
 		[
-			//	interface, trait
-			'~\s\b(?:interface|trait)\s\K(?>[^{]+)~',
+			str_replace('?_>', self::PhpClosingTag, '~\s\b(?:interface|trait)\s\K(?_>[^{]+)~'),
 		],
 		function ($match)
 		{
@@ -867,9 +932,9 @@ class Varrefvals
 	{
 		$file = preg_replace_callback(
 		[
-			//	single n double quoted string, backtick operator
-			'~(?|(?>([\'"])(.*?(?<!\\\\)(\\\\\\\\)*)\1)|(`)([^`]*)`)~s',
-			//			1					2			 1	  2
+			str_replace('?_>', self::PhpClosingTag,
+			'~(?|(?_>([\'"])(.*?(?<!\\\\)(\\\\\\\\)*)\1)|(`)([^`]*)`)~s'),
+			//			1					2			  1	   2
 		],
 		function ($match)
 		{
@@ -901,8 +966,7 @@ class Varrefvals
 	{
 		$file = preg_replace_callback(
 		[
-			//	html
-			'~^(?!<\?).+?(?=<\?)|(?<=\?>).+?(?=<\?)|(?<=\?>).+?$~s',
+			str_replace('?_>', self::PhpClosingTag, '~^(?!<\?).+?(?=<\?)|(?<=\?_>).+?(?=<\?)|(?<=\?_>).+?$~s'),
 		],
 		function ($match)
 		{
@@ -915,4 +979,3 @@ class Varrefvals
 
 $varrefvals = new Varrefvals;
 $varrefvals->execute($argv[1]);
-
