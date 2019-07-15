@@ -191,6 +191,37 @@ class Varrefvals
 		
 		//	21. list
 		$this->processListPart($file);
+		
+		//	22. foreach as
+		$this->processForeachAsPart($file);
+	}
+	
+	//	process foreach as part
+	public function processForeachAsPart (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			str_replace('\s*', self::CommentEscape,
+			'~\bas\b\s*\K((?:\bref\b|&)?)(\s*)(\$?)(\b\w+\b)(\s*)((?:=>|:)?)(\s*)((?:\bref\b|&)?)(\s*)(\$?)((?:\b\w+\b)?)(\s*\))~'),
+			//                    1        2    3      4      5       6       7         8          9    10        11        12                             |                       1              
+		],
+		function ($match)
+		{
+			if ($match[1]) $match[1] = '&';
+			if ($match[8]) $match[8] = '&';
+			
+			$match[3] = '$';
+			$this->package->variable[] = $match[4];
+			if ($match[6]) $match[6] = '=>';
+			if ($match[11])
+			{
+				$this->package->variable[] = $match[11];
+				$match[10] = '$';
+			}
+			$match[0] = '';
+			return implode($match);
+		}
+		, $file);
 	}
 	
 	//	process list part
@@ -634,14 +665,6 @@ function var2php($path)
 		$match2 = ','.implode(',' , $match2[1]);
 		preg_match_all('/(?<=,)[^=]+(?==)/', $match2, $match2);
 		if ((bool)$match2[0]) $match .= implode(',' , $match2[0]) . ',';
-	}
-	
-	//	find variable by foreach keyword
-	preg_match_all('/(?<=\bas\s)\s*[^\)]+(?=\))/', $file, $match2);
-	if ((bool)$match2[0])
-	{
-		$match2 = implode(',' , $match2[0]);
-		$match .= preg_replace(array('/\bref\s+/','/\s*=>\s*/','/\s*:\s*/'), array('',',',','), $match2) . ',';
 	}
 	
 	//	replace var, ref, refs, vals, this, supergobal alias
