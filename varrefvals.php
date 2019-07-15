@@ -108,6 +108,16 @@ class Varrefvals
 				return;
 			}
 			
+			//	non empty argument: check .var file extension
+			if(!preg_match('/.*?\.var$/i', $file))
+			{
+				$this->message($file);
+				$this->message("Please provide .var or .php file only.\n");
+				return;
+			}
+			
+			//	create a .php file from a .var file
+			$this->var2php($file);
 		}
 		catch (Exception $e)
 		{
@@ -127,15 +137,6 @@ $varrefvals = new Varrefvals;
 $varrefvals->execute($argv[1]);
 
 
-
-if(!preg_match('/.*\.var/i', $argv[1]))	//	non empty argument: check .var file extension
-{
-	echo "\n	", $argv[1], "\n";
-	echo '	please provide .var or .php file only. ' , "\n";
-	return;
-}
-
-var2php($argv[1]);	// create a .php file from a .var file
 
 function echoMessage($text)
 {
