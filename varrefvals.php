@@ -206,6 +206,42 @@ class Varrefvals
 		
 		//	26. aliases
 		$this->replaceAliases($file);
+		
+		//	27. variable
+		$this->variablilize($file);
+	}
+	
+	//	variablilize
+	public function variablilize (&$file)
+	{
+		$this->package->variable = array_filter(preg_replace_callback('~^(?i:' . self::Reserved . ')$~',
+		function ($match)
+		{
+			$this->package->falseVariable[] = $match[0];
+			return '';
+		}
+		, array_unique($this->package->variable)));
+		
+		if ($this->package->falseVariable) $this->message2("false variable detected:\n\t" . implode(', ', $this->package->falseVariable) . "\n");
+		
+		$file = preg_replace_callback(
+		[
+			str_replace(
+			[
+				'\s*',
+				'\c*',
+			],
+			[
+				self::CommentEscape,
+				self::CodeEscape,
+			],
+			'~(?:[\w})]\s*\.|(..))\K(?<!\$|::|->|\\\)(?!\b(?i:' . self::SemiReserved . ')\b(?:\\\|\s*\())(?=\b(?:' . implode('|', $this->package->variable) . ')\b(?!\\\))~s'),
+		],
+		function ($match)
+		{
+			return isset($match[1]) ? '$' : '';
+		}
+		, $file);
 	}
 	
 	//	replace aliases
@@ -792,39 +828,6 @@ function var2php($path)
 	$file = preg_replace('/(?<=[^\s\w])\s*\(\s*('.$casting.')\s*\)/', ' ${1}_C__t__G_ ', $file);
 	
 	$match = '';
-	
-	//	put $ to variable
-	$match = trim(preg_replace(array('/\s+/', '/,,/'), array('', ','), $match), ',');
-	if ( $match != '' )
-	{
-		$match2 = '$'.str_replace(',',',$', $match);
-		$match2 = explode(',', $match2);
-		$match = '/(?<![\$>:\\\\])\b'.str_replace(',', '(?!\\\\)\b/,/(?<![\$>:\\\\])(?!\\\\)\b', $match) . '\b/';
-		$match = explode(',', $match);
-		$file = preg_replace($match, $match2, $file);
-		
-		//	fix error on class, interface, extends, implements, trait, & function names
-		$file = preg_replace(
-			['/\b(class|interface|extends|implements|trait)\s+\$/', '/\b(function)\s+(|&)\s*\$/'],
-			['${1} ', '${1} ${2}'], $file);
-		
-		//	fix error on type declaration/hint & return type of function argument
-		preg_match_all('/(?<=\bfunction\b)[^\{]*([,\(]\s*\$\w+\s+[&\$\.]|\)\s*:\s*\$\w+)[^\{]*(?=\{)/', $file, $match2);
-		if ((bool)$match2[0])
-		{
-			foreach( $match2[0] as $value )
-			{
-				preg_match_all('/[,\(]\s*\$\w+\s+[&\$\.]|\)\s*:\s*\$\w+/', $value, $match3);
-				if ((bool)$match3[0])
-				{
-					$match3 = $match3[0];
-					$match4 = preg_replace('/\$/', '', $match3, 1);
-					$match3 = str_replace($match3, $match4, $value);
-					$file = str_replace($value, $match3, $file);
-				}
-			}
-		}
-	}
 	
 	//	replace dot for method / property
 	$match4 = array(
