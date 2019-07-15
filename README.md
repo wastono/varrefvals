@@ -36,7 +36,7 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 7. Dot operator for string concatenation needs to be separated from *expressions* by *space* characters.
 8. Dot operator for object needs to be without space next to the property or method name.
 9. Instance, special variable (`this`, `self`, `static`, `parent`), and class name can be separated from dot operator on the next line of statement.
-10. Accessing object, property, or method name within variable should not be used. Please use `{ *expression* }` instead.
+10. Accessing object, property, or method name within variable should not be used. Please use `{ expression }` instead.
 
 ## Conversion
 
