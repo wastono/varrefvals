@@ -161,6 +161,45 @@ class Varrefvals
 		
 		//	7. comment
 		$this->isolateComment($file);
+		
+		//	8. interface
+		//	9. trait
+		$this->isolateInterfaceAndTraitName($file);
+		
+		//	10. namespace
+		$this->isolateNamespace($file);
+	}
+	
+	//	isolate namespace
+	public function isolateNamespace (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			//	namespace
+			str_replace('\s*', self::CommentEscape,
+			'~\bnamespace\b\s\s*[^;{]+|[^\\\\]\K\bnamespace\b\\\\[^\[(;\s#/]+~'),
+		],
+		function ($match)
+		{
+			$match[0] = str_replace('.', '::', $match[0]);
+			return $this->package->generateAlias($match[0]);
+		}
+		, $file);
+	}
+	
+	//	isolate interface and trait name
+	public function isolateInterfaceAndTraitName (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			//	interface, trait
+			'~\s\b(?:interface|trait)\s\K(?>[^{]+)~',
+		],
+		function ($match)
+		{
+			return $this->package->generateAlias($match[0]);
+		}
+		, $file);
 	}
 	
 	//	isolate comment
