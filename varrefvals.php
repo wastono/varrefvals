@@ -209,6 +209,41 @@ class Varrefvals
 		
 		//	27. variable
 		$this->variablilize($file);
+		
+		//	28. dot operator
+		$this->replaceDotOperator($file);
+	}
+	
+	//	replace dot operator
+	public function replaceDotOperator (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			//	.class	.Constant
+			str_replace('\s*', self::CommentEscape,
+			'~[\w)}]\s*\K\.(?=\b(?:class\b|\b[A-Z]))~'),
+			
+			//	instance.
+			str_replace('\s*', self::CommentEscape,
+			'~(?:\$\b\w+\b|[)}])\K(?:\s*\.(?:\$?\b[_a-zA-Z]\w*\b|\{))+~'),
+			
+			//	notInstance.
+			str_replace('\s*', self::CommentEscape,
+			'~(?<!\$)\b[_a-zA-Z]\w*\b\s*\.(?|(\{)|\$?\b[_a-zA-Z]\w*\b\s*(\(?))~'),
+			//								  1						      1
+		],
+		function ($match)
+		{
+			//	.class	.Constant
+			if ($match[0] == '.') return '::';
+			
+			//	notInstance.
+			if (isset($match[1])) return str_replace('.', ($match[1] ? '::' : '::$'), $match[0]);
+			
+			//	instance.
+			return str_replace('.', '->', $match[0]);
+		}
+		, $file);
 	}
 	
 	//	variablilize
@@ -828,36 +863,6 @@ function var2php($path)
 	$file = preg_replace('/(?<=[^\s\w])\s*\(\s*('.$casting.')\s*\)/', ' ${1}_C__t__G_ ', $file);
 	
 	$match = '';
-	
-	//	replace dot for method / property
-	$match4 = array(
-		'/\$\w+\.[{\$\w]/',
-		'/\w\.\w+\.[{\$\w]/',
-		'/\w->\w+\.[{\$\w]/',
-		'/\w->\w+\.[{\$\w]/',
-		'/(?<!\$)\b\w+\.[\$\w]+\s*\(/',
-		'/(?<=[^\$>])\b\w+\.\$?[A-Z]\w*/',
-		'/(?<=[^\$>])\b\w+\.\$?[_a-z]\w*/'
-		);
-	$match5 = array(
-		'->',
-		'->',
-		'->',
-		'->',
-		'::',
-		'::',
-		'::$'
-		);
-	foreach( $match4 as $key => $value )
-	{
-		preg_match_all($value, $file, $match2);
-		if ((bool)$match2[0])
-		{
-			$match2 = $match2[0];
-			$match3 = str_replace(array('.$','.'), $match5[$key], $match2);
-			$file = str_replace($match2, $match3, $file);
-		}
-	}
 	
 	//	restore casting
 	$file = preg_replace('/('.$casting.')_C__t__G_/', '($1)', $file);
