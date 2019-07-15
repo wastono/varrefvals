@@ -55,8 +55,17 @@ class ResultPackage
 	}
 }
 
+class Varrefvals
+{
+	public $package;
+	
+	public function __construct ()
+	{
+		ob_implicit_flush(1);
+	}
+}
 
-ob_implicit_flush(true);
+
 echo "\n	Varrefvals (c) 2016 Wastono.\n";
 
 //	check file extension
