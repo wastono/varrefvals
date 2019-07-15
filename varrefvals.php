@@ -188,6 +188,42 @@ class Varrefvals
 		//	19. variable declaration
 		//	20. global variable
 		$this->processVariableIntro($file);
+		
+		//	21. list
+		$this->processListPart($file);
+	}
+	
+	//	process list part
+	public function processListPart (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			str_replace('\s*', self::CommentEscape,
+			'~\blist\b\s*\K(\((?:(?>[^()]+)|(?-1))*\))|\bas\b\s*\K(\[(?:(?>[^\[\]]+)|(?-1))*\])|(\[(?:(?>[^\[\]]+)|(?-1))*\])(?=\s*=)~'),
+			//                         1              |               1                        |                       1              
+		],
+		function ($match)
+		{
+			$match[0] = str_replace(':', '=>', $match[0]);
+			return preg_replace_callback(
+			[
+				str_replace('\s*', self::CommentEscape,
+				'~([\[(,>]\s*&?\s*)((?:\bref\b\s*)?)(\$?)((?!\blist\b|\d+)\b\w+\b)(?=\s*[\[\],)])~'),
+				//        1                2           3                  4                       
+			],
+			function ($found)
+			{
+				if ($found[2]) $found[2] = '&';
+				
+				$found[3] = '$';
+				$this->package->variable[] = $found[4];
+				
+				$found[0] = '';
+				return implode($found);
+			}
+			, $match[0]);
+		}
+		, $file);
 	}
 	
 	//	process variable intro
@@ -606,14 +642,6 @@ function var2php($path)
 	{
 		$match2 = implode(',' , $match2[0]);
 		$match .= preg_replace(array('/\bref\s+/','/\s*=>\s*/','/\s*:\s*/'), array('',',',','), $match2) . ',';
-	}
-	
-	//	find variable by list keyword
-	preg_match_all('/(?<=\blist)\s*\(\s*([^=]+)(?==)/', $file, $match2);
-	if ((bool)$match2[1])
-	{
-		$match2 = implode(',' , $match2[1]);
-		$match .= preg_replace(array('/\s*\[[^\]]+\]\s*/', '/\s*\)\s*/','/\s*list\s*\(\s*/'), '', $match2) . ',';
 	}
 	
 	//	replace var, ref, refs, vals, this, supergobal alias
