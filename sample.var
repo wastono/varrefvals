@@ -1,0 +1,980 @@
+<?php
+
+//	varrefvals.php
+
+/*
+	
+    Varrefvals. Simple code compiler for PHP code written without $ => :: -> ; signs.
+    Copyright (C) 2016 - 2019 Wastono
+	
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+	
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+	
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+	
+*/
+
+//	Varrefvals version 2.0
+
+class ResultPackage
+{
+	private counter = 0
+	public alias = []
+	public part = []
+	public variable = []
+	public falseVariable = []
+	
+	//	generate alias
+	public function generateAlias (ref part)
+	{
+		var alias = 'A_' . this.counter++ . '_'
+		array_unshift(this.alias, alias)
+		array_unshift(this.part, part)
+		return alias
+	}
+	
+	//	isolate text
+	public function isolateText (ref text)
+	{
+		return (text === '') ? '' : ('X_' . text . '_')
+	}
+	
+	//	isolate part
+	public function isolatePart (ref part)
+	{
+		if (strpos(part, '\\') !== false) return this.generateAlias(part)
+		return this.isolateText(part)
+	}
+}
+
+class Varrefvals
+{
+	private const Reserved = 'the|php|fn|stdclass|true|false|null|int|float|boolean|integer|binary|unset|real|double|bool|string|void|iterable|object|resource|mixed|numeric|abstract|and|array|as|break|callable|case|catch|class|clone|const|continue|declare|default|die|do|echo|else|elseif|empty|enddeclare|endfor|endforeach|endif|endswitch|endwhile|eval|exit|extends|final|finally|for|foreach|function|global|goto|if|implements|include|instanceof|insteadof|interface|isset|list|namespace|new|or|print|private|protected|public|require|return|static|switch|throw|trait|try|unset|use|var|while|xor|yield|from'
+	private const SemiReserved = 'constant|sqrt|abs|pack|glob|prev|next|current|min|max|link|dl|chr|log|key|exp|pos|count|file|dir|sin|cos|tan|pi|rand|range|mail|system|defined|header|uniqid|crypt|time|date|hash|microtime|localtime|stat|idate'
+	
+	private const CommentEscape = '(?:(?:#|//|/\*)A_\d+_\*?/?|\s)*'
+	private const CodeEscape = '(?!\bA_\d+_\b|\bX_\w+_\b|\bvals\b|\brefs?\b)'
+	private const CodeEscape2 = '(?!\d+|\b(?:else|if|final|abstract|class|interface|trait|function|const|return|goto|global|echo|die|require|require_once|include|include_once|new|clone|throw|use|var|public|private|protected|static|yield|vals|refs?|A_\d+_|X_\w+_)\b)'
+	
+	private const PhpClosingTag = '?' . '>'
+	
+	public package
+	
+	public function __construct ()
+	{
+		ob_implicit_flush(1)
+		this.message("Varrefvals (c) 2016 - 2019 Wastono.\n")
+	}
+	
+	private function message (s) { echo "\n\t", s }
+	private function message2 (s)
+	{
+		var now = DateTime.createFromFormat('U.u', microtime(true))
+		echo "\n\t", now.format('Y-m-d H:i:s.u'), " : ", s
+	}
+	
+	public function execute (file = '')
+	{
+		try
+		{
+			//	check file
+			//	skip varrefvals.php
+			if (file == 'varrefvals.php')
+			{
+				this.message("skip varrefvals.php file.\n\n")
+				return
+			}
+			
+			//	execute .php file
+			if (preg_match('/.*?\.php$/i', file))
+			{
+				this.message('Executing ' . file . "...\n\n")
+				include file
+				return
+			}
+			
+			//	empty argument: find all .var file, recursively
+			if (file == '')
+			{
+				var dir = getcwd()
+				foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dir)) as path)
+				{
+					if (preg_match('/.*?\.var$/i', path) && !is_dir(path))
+					{
+						// create .php file from .var file
+						this.var2php(path)
+					}
+				}
+				this.message("That's all in " . dir . "\n")
+				return
+			}
+			
+			//	non empty argument: check .var file extension
+			if (!preg_match('/.*?\.var$/i', file))
+			{
+				this.message(file)
+				this.message("Please provide .var or .php file only.\n")
+				return
+			}
+			
+			//	create a .php file from a .var file
+			this.var2php(file)
+		}
+		catch (Exception e)
+		{
+			this.message2(e.getMessage())
+		}
+	}
+	
+	//	convert .var file to php file
+	public function var2php (path)
+	{
+		var filename = basename(path)
+		this.message2('start ' . filename)
+		
+		//	check file
+		if (!file_exists(path))
+		{
+			this.message2("file is not found!\n\t" . path . "\n")
+			return
+		}
+		
+		//	result package
+		this.package = new ResultPackage
+		
+		//	add special variable
+		this.package.variable[] = 'this'
+		
+		//	read file content
+		var file = file_get_contents(path)
+		
+		//	1. html
+		this.isolateHtmlPart(file)
+		
+		//	2. heredoc
+		//	3. nowdoc
+		this.isolateDocString(file)
+		
+		//	4. single quoted string
+		//	5. double quoted string
+		//	6. backtick operator
+		this.isolateQuotedText(file)
+		
+		//	7. comment
+		this.isolateComment(file)
+		
+		//	8. interface
+		//	9. trait
+		this.isolateInterfaceAndTraitName(file)
+		
+		//	10. namespace
+		this.isolateNamespace(file)
+		
+		//	11. catch
+		this.processCatchPart(file)
+		
+		//	12. class (extends, implements)
+		//	13. use for namespace
+		//	14. use for trait
+		this.processClassAndUsePart(file)
+		
+		//	15. function
+		//	16. fn
+		this.processFunctionAndFnPart(file)
+		
+		//	17. digit space (binary, octal, decimal, float, hexadecimal)
+		this.removeDigitSpace(file)
+		
+		//	18. properties declaration
+		//	19. variable declaration
+		//	20. global variable
+		this.processVariableIntro(file)
+		
+		//	21. list
+		this.processListPart(file)
+		
+		//	22. foreach as
+		this.processForeachAsPart(file)
+		
+		//	23. yield
+		this.processYieldPart(file)
+		
+		//	24. pairing notation
+		this.replacePairingNotation(file)
+		
+		//	25. assignment
+		this.processAssignmentPart(file)
+		
+		//	26. aliases
+		this.replaceAliases(file)
+		
+		//	27. variable
+		this.variablilize(file)
+		
+		//	28. dot operator
+		this.replaceDotOperator(file)
+		
+		//	29. statement terminator
+		this.terminateStatement(file)
+		
+		//	30. isolated part
+		this.restoreIsolatedPart(file)
+		
+		//	write .php file
+		var name = str_replace('.var', '.php', path)
+		file_put_contents(name , file)
+		
+		this.message2("write " . str_replace('.var', '.php', filename) . "\n")
+	}
+	
+	//	restore isolated part
+	public function restoreIsolatedPart (ref file)
+	{
+		var selector = '(\w+)'
+		file = preg_replace('~(' . self.PhpClosingTag . '\b' . this.package.isolateText(selector) . '\b)~', '$1', file)
+		if (this.package.alias) file = str_replace(this.package.alias, this.package.part, file)
+	}
+	
+	//	terminate statement
+	public function terminateStatement (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			//	break, continue, return, yield, exit;
+			str_replace('\s*', self.CommentEscape,
+			'~\b(?:break|continue|return|yield|exit)\b\K(?=[ \t]*(;?)(?|[ \t]*(?:(?://|/\*|#)A_\d+_\*?/?)?[ \t]*(;?)[ \t]*[\r\n]|\s*(;?)\s*\}))~'),
+			//											  		  1										         2					 2
+			
+			//	return, yield from, = function () {};
+			str_replace(
+			[
+				'\s*',
+				'?_>',
+			],
+			[
+				self.CommentEscape,
+				self.PhpClosingTag,
+			],
+			'~(?:\breturn\b|\byield\b\s\s*\bfrom\b|[^-+/*.%&|<>!=?^]=)\s*(?:\bstatic\b)?\s*\bfunction\b\s*(?:\bref\b|&)?\s*(\((?:(?_>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))\s*:?\s*\w*\s*(\{(?:(?_>[^{}]+)|(?-1))*\})\K(?=\s*(;?))~'),
+			//																																	1													2					    3  
+			
+			//	expression ; \r\n expression			include bug: expression ; }
+			str_replace(
+			[
+				'\s*',
+				'?_>',
+			],
+			[
+				self.CommentEscape,
+				self.PhpClosingTag,
+			],
+			'~(?|(?<!//|#)(?!\b(?i:' . str_replace(['|null|', '|true|', '|false|'], '|', self.Reserved) . '|A_\d+_)\b)\$?\b\w+\b()|(?<=->|::)\bclass\b()|[\])\'"`]()|(?:->|::)\s*(\{(?:(?_>[^{}]+)|(?-1))*\})|\+\+()|--())\K(?=(?|\s*(;?)()()\s*(?:\?_>|\}|$)|[ \t]*(;?)[ \t]*(?:(?://|/\*|#)A_\d+_\*?/?)?[ \t]*(;?)()[ \t]*[\r\n]\s*(?:[\'"`$]|\+\+|--|(?!\b(?:as|instanceof|insteadof|and|x?or)\b)\$?\b\w+\b|(\[(?:(?_>[^\[\]]+)|(?-1))*\])\s*=|(\((?:(?_>[^()]+)|(?-1))*\))\s*(?:->|::|\())))~'),
+			//																													1			 		  1			  1								1				  1    1			  2  3 4						 2											 3  4
+			
+			//	remove bug:	->{expression ; }	::{expression ; }
+			str_replace('\s*', self.CommentEscape,
+			'~(?:->|::)\s*\{[^{;}]+;\s*\}~'),
+		],
+		function (match)
+		{
+			//	expression ; \r\n expression
+			if (isset(match[4])) return (match[2] || match[3]) ? '' : ';'
+			
+			//	return, yield from, = function () {};
+			if (isset(match[3])) return match[3] ? '' : ';'
+			
+			//	remove bug:	->{expression ; }	::{expression ; }
+			if (!isset(match[1])) return str_replace(';', '', match[0])
+			
+			//	break, continue, return, yield, exit;
+			return (match[1] || match[2]) ? '' : ';'
+		}
+		, file)
+	}
+	
+	//	replace dot operator
+	public function replaceDotOperator (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			//	.class	.Constant
+			str_replace('\s*', self.CommentEscape,
+			'~[\w)}]\s*\K\.(?=\b(?:class\b|\b[A-Z]))~'),
+			
+			//	instance.
+			str_replace('\s*', self.CommentEscape,
+			'~(?:\$\b\w+\b|[)}])\K(?:\s*\.(?:\$?\b[_a-zA-Z]\w*\b|\{))+~'),
+			
+			//	notInstance.
+			str_replace('\s*', self.CommentEscape,
+			'~(?<!\$)\b[_a-zA-Z]\w*\b\s*\.(?|(\{)|\$?\b[_a-zA-Z]\w*\b\s*(\(?))~'),
+			//								  1						      1
+		],
+		function (match)
+		{
+			//	.class	.Constant
+			if (match[0] == '.') return '::'
+			
+			//	notInstance.
+			if (isset(match[1])) return str_replace('.', (match[1] ? '::' : '::$'), match[0])
+			
+			//	instance.
+			return str_replace('.', '->', match[0])
+		}
+		, file)
+	}
+	
+	//	variablilize
+	public function variablilize (ref file)
+	{
+		this.package.variable = array_filter(preg_replace_callback('~^(?i:' . self.Reserved . ')$~',
+		function (match)
+		{
+			this.package.falseVariable[] = match[0]
+			return ''
+		}
+		, array_unique(this.package.variable)))
+		
+		if (this.package.falseVariable) this.message2("false variable detected:\n\t" . implode(', ', this.package.falseVariable) . "\n")
+		
+		file = preg_replace_callback(
+		[
+			str_replace(
+			[
+				'\s*',
+				'\c*',
+			],
+			[
+				self.CommentEscape,
+				self.CodeEscape,
+			],
+			'~(?:[\w})]\s*\.|(..))\K(?<!\$|::|->|\\\)(?!\b(?i:' . self.SemiReserved . ')\b(?:\\\|\s*\())(?=\b(?:' . implode('|', this.package.variable) . ')\b(?!\\\))~s'),
+		],
+		function (match)
+		{
+			return isset(match[1]) ? '$' : ''
+		}
+		, file)
+	}
+	
+	//	replace aliases
+	public function replaceAliases (ref file)
+	{
+		file = preg_replace(
+		[
+			'~\bref\b(?:\s+|(?=\())~',		//	2
+			'~\brefs\s+~',		//	3
+			'~\bvals\s+~',		//	4
+			'~\b\s*=\s*\{\}~',	//	5
+			'~\bdserver\b|\bthe\.server\b~',	//	6
+			'~\bdget\b|\bthe\.get\b~',			//	7
+			'~\bdpost\b|\bthe\.post\b~',		//	8
+			'~\bdrequest\b|\bthe\.request\b~',	//	9
+			'~\bdcookie\b|\bthe\.cookie\b~',	//	10
+			'~\bdfiles\b|\bthe\.files\b~',		//	11
+			'~\bdenv\b|\bthe\.env\b~',			//	12
+			'~\bdsession\b|\bthe\.session\b~',	//	13
+			'~\bdglobals\b|\bthe\.globals\b~',	//	14
+			'~\bdhttpresponseheader\b|\bthe\.httpResponseHeader\b~',	//	15
+			'~\bargc\b|\bthe\.argc\b~',		//	16
+			'~\bargv\b|\bthe\.argv\b~',		//	17
+			'~\bdline\b|\bthe\.line\b~',		//	18
+			'~\bdfile\b|\bthe\.file\b~',		//	19
+			'~\bddir\b|\bthe\.dir\b~',			//	20
+			'~\bdfunction\b|\bthe\.function\b~',	//	21
+			'~\bdclass\b|\bthe\.class\b~',		//	22
+			'~\bdtrait\b|\bthe\.trait\b~',		//	23
+			'~\bdmethod\b|\bthe\.method\b~',	//	24
+			'~\bdnamespace\b|\bthe\.namespace\b~',	//	25
+		],
+		[
+			'&',				//	2
+			'&...',				//	3
+			'...',				//	4
+			' = new stdClass',	//	5
+			'$_SERVER',			//	6
+			'$_GET',			//	7
+			'$_POST',			//	8
+			'$_REQUEST',		//	9
+			'$_COOKIE',			//	10
+			'$_FILES',			//	11
+			'$_ENV',			//	12
+			'$_SESSION',		//	13
+			'$_GLOBALS',		//	14
+			'$http_response_header',		//	15
+			'$argc',			//	16
+			'$argv',			//	17
+			'__LINE__',			//	18
+			'__FILE__',			//	19
+			'__DIR__',			//	20
+			'__FUNCTION__',		//	21
+			'__CLASS__',		//	22
+			'__TRAIT__',		//	23
+			'__METHOD__',		//	24
+			'__NAMESPACE__',	//	25
+		]
+		, file)
+	}
+	
+	//	process assignment part
+	public function processAssignmentPart (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			str_replace(
+			[
+				'\s*',
+				'\c*',
+				'?_>',
+			],
+			[
+				self.CommentEscape,
+				self.CodeEscape,
+				self.PhpClosingTag,
+			],
+			'~((?:\b(?:A_\d+_|X_\w+_)\b[ \t]+|\bconst\b|\bdeclare\b\s*\(\s*)?)(\s*)((?<!->|\.|::)\$?)(\c*\b\w+\b)([ \t]*(\[(?:(?_>[^\[\]]+)|(?-1))*\])?)(\s*(?:[-%|+/&.^]|\*\*?|>>|<<|\?\?)?[=])(?![=>])~'),
+			//                  1                                               2          3               4       5                6                              7              
+		],
+		function (match)
+		{
+			if (match[1]) return match[0]
+			match[3] = '$'
+			this.package.variable[] = match[4]
+			match[6] = ''
+			match[0] = ''
+			return implode(match)
+		}
+		, file)
+	}
+	
+	//	replace pairing notation
+	public function replacePairingNotation (ref file)
+	{
+		//	pairing:	key : value
+		file = preg_replace(
+		[
+			'~[(\[,]\s*[-]?\s*[\'"]?\$?\w+[\'"]?(?:(?:\.|::|->)\$?\w+)*\s*(?:\[[^\]]*\]\s*|\([^)]*\)\s*)*\s*\K:(?![:?])(?=\s*\S)~',
+			//                1                      2      3       4       5    6         7                       
+		], '=>', file)
+	}
+	
+	//	process yield part
+	public function processYieldPart (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			'~\byield\b\s*\K(\$?)((?!\d+|\bfrom\b)\b\w+\b)(\s*)((?:=>|:)?)(\s*)(\$?)((?:\b\w+\b)?)(?=\s*(?:\)|;))~',
+			//                1                      2      3       4       5    6         7                       
+		],
+		function (match)
+		{
+			match[1] = '$'
+			this.package.variable[] = match[2]
+			if (match[4]) match[4] = '=>'
+			if (match[7])
+			{
+				match[6] = '$'
+				this.package.variable[] = match[7]
+			}
+			match[0] = ''
+			return implode(match)
+		}
+		, file)
+	}
+	
+	//	process foreach as part
+	public function processForeachAsPart (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			str_replace('\s*', self.CommentEscape,
+			'~\bas\b\s*\K((?:\bref\b|&)?)(\s*)(\$?)(\b\w+\b)(\s*)((?:=>|:)?)(\s*)((?:\bref\b|&)?)(\s*)(\$?)((?:\b\w+\b)?)(\s*\))~'),
+			//                    1        2    3      4      5       6       7         8          9    10        11        12                             |                       1              
+		],
+		function (match)
+		{
+			if (match[1]) match[1] = '&'
+			if (match[8]) match[8] = '&'
+			
+			match[3] = '$'
+			this.package.variable[] = match[4]
+			if (match[6]) match[6] = '=>'
+			if (match[11])
+			{
+				this.package.variable[] = match[11]
+				match[10] = '$'
+			}
+			match[0] = ''
+			return implode(match)
+		}
+		, file)
+	}
+	
+	//	process list part
+	public function processListPart (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			str_replace(
+			[
+				'\s*',
+				'?_>',
+			],
+			[
+				self.CommentEscape,
+				self.PhpClosingTag,
+			],
+			'~\blist\b\s*\K(\((?:(?_>[^()]+)|(?-1))*\))|\bas\b\s*\K(\[(?:(?_>[^\[\]]+)|(?-1))*\])|(\[(?:(?_>[^\[\]]+)|(?-1))*\])(?=\s*=)~'),
+			//                         1               |               1                         |                       1              
+		],
+		function (match)
+		{
+			match[0] = str_replace(':', '=>', match[0])
+			return preg_replace_callback(
+			[
+				str_replace('\s*', self.CommentEscape,
+				'~([\[(,>]\s*&?\s*)((?:\bref\b\s*)?)(\$?)((?!\blist\b|\d+)\b\w+\b)(?=\s*[\[\],)])~'),
+				//        1                2           3                  4                       
+			],
+			function (found)
+			{
+				if (found[2]) found[2] = '&'
+				
+				found[3] = '$'
+				this.package.variable[] = found[4]
+				
+				found[0] = ''
+				return implode(found)
+			}
+			, match[0])
+		}
+		, file)
+	}
+	
+	//	process variable intro
+	public function processVariableIntro (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			str_replace(
+			[
+				'\s*',
+				'\c*',
+			],
+			[
+				self.CommentEscape,
+				self.CodeEscape2,
+			],
+			//	global
+			'~(?|()(\bglobal\b[ \t]+)()()()(\$?\b\w+\b(?:\s*,\s*\b\w+\b)*)((?:\s*;)?)'
+			//   1       2           3 4 5   6                                   7   
+			//        keyword                $name         , tail                ;   
+			
+			//	properties, variable declaration
+			. '|()(\b(?:var|public|private|protected|static)\b[ \t]+(?:\b(?:public|private|protected|static)\b[ \t]+)?)(\??[ \t]*)((?:[\\\\]?\c*\b[\w\\\\]+\b)?)([ \t]*)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;\r\n]*)*)((?:\s*;)?)'
+			//  1        2                                                                                                3                         4              5      6                                            7   
+			//        keyword                                                                                             ?                       type                    $name          , tail                        ;
+			
+			//	bare properties
+			. '|((?:(?:\S\s*)?[\r\n]+|[\r\n{};])[ \t]*)()(\??[ \t]*)([\\\\]?\c*\b[\w\\\\]+\b)([ \t]+)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;\r\n]*)*)((?:\s*;)?))~'
+			//          1                              2    3                      4             5     6                                            7     
+			//        check                                 ?                    type                  $name   , tail                               ;      
+			),	
+		],
+		function (match)
+		{
+			if (preg_match('~^[,\[(]~', match[1])) return match[0]
+			if (substr(match[2], 0, 3) == 'var' && match[4] === '') match[2] = ltrim(substr(match[2], 3))
+			match[4] = this.package.isolatePart(match[4])
+			
+			//	put ; sign
+			match[6] = preg_replace('~('. self.CommentEscape . ')_REPLACED$~', ';$1', match[6] . '_REPLACED')
+			
+			//	$name + tail after first property declaration
+			match[6] = preg_replace_callback(
+			[
+				str_replace(
+				[
+					'\s*',
+					'\c*',
+					'?_>',
+				],
+				[
+					self.CommentEscape,
+					self.CodeEscape2,
+					self.PhpClosingTag,
+				],
+				'~(^|\s*,\s*)(\$?)(\b\c*\w+\b)((?:\s*=\s*(\[(?:(?_>[^\[\]]+)|(?-1))*\])?(?_>(?:\b\c*\w+\b\s*)+(\((?:(?_>[^()]+)|(?-1))*\)))?[^,\r\n]*)?)~'),
+				//	    1      2      3          4                       5                                            6
+				//      ,      $    name       tile  
+			],
+			function (found)
+			{
+				found[2] = '$'
+				this.package.variable[] = found[3]
+				found[5] = ''
+				found[6] = ''
+				found[0] = ''
+				return implode(found)
+			}
+			, match[6])
+			
+			match[7] = str_replace(';', '', match[7])
+			match[0] = ''
+			return implode(match)
+		}
+		, file)
+	}
+	
+	//	remove digit space
+	public function removeDigitSpace (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			'~\d\K (?=\d)|0x[a-f\d][a-f \d]+[a-f\d]~i',
+		],
+		function (match)
+		{
+			return str_replace(' ', '', match[0])
+		}
+		, file)
+	}
+	
+	//	process function and fn part
+	public function processFunctionAndFnPart (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			str_replace(
+			[
+				'\s*',
+				'\c*',
+				'?_>',
+			],
+			[
+				self.CommentEscape,
+				self.CodeEscape2,
+				self.PhpClosingTag,
+			]
+			, '~(?_>(\bf(?:unctio)?n\b)(\s*)((?:\bref\b|&)?)(\s*)((?:\c*\b(?_>\w+)\b)?)(\s*)(\((?:(?_>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))([ \t]*)(:?)([ \t]*)(\??)([ \t]*)((?:\c*(?_>[\w\\\\]+))?)(\s*)([{;:=]?))~'),
+			//			   1             2          3         4               5          6                7                                 8      9      10    11    12             13              14     15
+			//			   fn                       &                        name                      argument                                    :            ?                   type                   tail
+		],
+		function (match)
+		{
+			//	arguments		
+			match[7] = preg_replace_callback(
+			[
+				str_replace(
+				[
+					'\s*',
+					'\c*',
+					'?_>',
+				],
+				[
+					self.CommentEscape,
+					self.CodeEscape,
+					self.PhpClosingTag,
+				]
+				, '~(?_>([\(,]\s*\??\s*)((?_>\c*[\w\\\\]+)?)(\s*&?\s*)((?:\bvals\b|\brefs?\b)?)(\s*[.]*\s*)(\$?)(\c*\b\w+\b)(\s*=?\s*(\[(?:(?_>[^\[\]]+)|(?-1))*\])?(?_>(?:\b\w+\b\s*)+(\((?:(?_>[^()]+)|(?-1))*\)))?(?_>[^,\)]+)?))(?=$|[,\)])~'),
+				//             1                2              3                4                  5         6        7          8                  9                                           10
+				//       (,    ?              type             &               ref                ...        $       name       tail
+			],
+			function (found)
+			{
+				//	variable type
+				found[2] = this.package.isolatePart(found[2])
+				
+				//	reference
+				if (found[4]) found[4] = str_replace(['vals', 'refs', 'ref'], ['...', '&...', '&'], found[4])
+				
+				this.package.variable[] = found[7]
+				found[6] = '$'
+				found[9] = ''
+				found[10] = ''
+				found[0] = ''
+				return implode(found)
+			}
+			, match[7])
+			
+			//	function / fn name
+			match[5] = this.package.isolateText(match[5])
+			
+			//	return reference
+			if (match[3]) match[3] = '&'
+			
+			var isolateReturnType = false
+			
+			if (match[1] == 'fn')
+			{
+				if (match[13])	//	return type
+				{
+					if (match[15] == ':')	//	tail
+					{
+						isolateReturnType = true
+						match[15] = '=>'
+						match[9] = ':'
+					}
+					else if (match[15] == '=')
+					{
+						isolateReturnType = true
+					}
+					else if (match[9]) match[9] = '=>'
+				}
+				else if (match[9]) match[9] = '=>'
+			}
+			else	//	bagian function
+			{
+				if (match[15] == '')
+				{
+					if (match[13] == '')
+					{
+						match[9] = ''
+						match[11] = ''
+						match[8] = ';' . match[8]
+					}
+					else match[14] = ';' . match[14]
+				}
+				if (match[13])
+				{
+					match[9] = ':'
+					isolateReturnType = true
+				}
+			}
+			
+			if (isolateReturnType) match[13] = this.package.isolatePart(match[13])
+			
+			match[0] = ''
+			return implode(match)
+		}
+		, file)
+	}
+	
+	//	process class and use part
+	public function processClassAndUsePart (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			//	class (extends, implements) n use for namespace
+			str_replace(
+			[
+				'\s*',
+				'?_>',
+			],
+			[
+				self.CommentEscape,
+				self.PhpClosingTag,
+			],
+			'~(?|\s\K(\bclass\b)(\s\s*)([^{]+)(\{(?:(?_>[^{}]+)|(?-1))*\})|\s\K(\buse\b)(\s*)((?:\s*,?\s*(?!\()[\w\\\\]+)+)(\s*)((?:\{[^}]+\})?)(\s*)(;?))~'),
+			//            1        2      3               4               |        1      2               3                  4       5            6   7    
+			//			class            name           body              |       use                    name                       item              ;    
+		],
+		function (match)
+		{
+			if (match[0][0] == 'c')	//	class
+			{
+				match[4] = preg_replace_callback(
+				[
+					//	use in class for trait related
+					str_replace(
+					[
+						'\s*', 
+						'?_>',
+					],
+					[
+						self.CommentEscape,
+						self.PhpClosingTag,
+					],
+					'~(?_>\s\buse\b\s*)\K((?_>\s*,?\s*(?!\()\b\w+\b)+)(\s*)(;?)((?_>\{[^}]+\})?)~'),
+					//					                1               2   3          4
+					//							       name                 ;         item
+				],
+				function (found)
+				{
+					found[1] = this.package.generateAlias(found[1])
+					found[3] = ''
+					
+					if (found[4] == '') found[2] = ';' . found[2]
+					else found[4] = preg_replace_callback(
+					[
+						//	trait item part
+						str_replace(
+						[
+							'\s*',
+							'?_>',
+						],
+						[
+							self.CommentEscape,
+							self.PhpClosingTag,
+						],
+						'~(?_>\{?\s*)\K((?_>\b[\w:.]+\b))(\s\s*)((?_>\b\w+\b\s*,?\s*)+)(;?)~'),
+						//					  1		        2           3               4
+						//					name                      name              ;
+					],
+					function (got)
+					{
+						got[3] = str_replace('.', '::', got[1]) . got[2] . got[3]
+						got[2] = ''
+						got[1] = ''
+						got[4] = ';'
+						got[3] = this.package.generateAlias(got[3])
+						got[0] = ''
+						return implode(got)
+					}
+					, found[4])
+					
+					found[0] = ''
+					return implode(found)
+				}
+				, match[4])
+			}
+			else	//	use, namespace related
+			{
+				if (match[5]) match[6] = ';' . match[6]
+				else
+				{
+					match[6] = ';' . match[4] . match[6]
+					match[4] = ''
+				}
+				
+				match[7] = ''
+				match[3] = match[3] . match[4] . match[5]
+				match[4] = ''
+				match[5] = ''
+			}
+			
+			match[3] = this.package.generateAlias(match[3])
+			match[0] = ''
+			return implode(match)
+		}
+		, file)
+	}
+	
+	//	process catch part
+	public function processCatchPart (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			//	catch
+			str_replace('\s*', self.CommentEscape,
+			'~\bcatch\b\s*\(\K([^)]+?)(\s)(\$?)(\b\w+\b)(?=\s*\))~'),
+			//				    1       2    3     4         
+			//				  type           $    name
+		],
+		function (match)
+		{
+			this.package.variable[] = match[4]
+			match[3] = '$'
+			match[1] = this.package.generateAlias(match[1])
+			match[0] = ''
+			return implode(match)
+		}
+		, file)
+	}
+	
+	//	isolate namespace
+	public function isolateNamespace (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			//	namespace
+			str_replace('\s*', self.CommentEscape,
+			'~\bnamespace\b\s\s*[^;{]+|[^\\\\]\K\bnamespace\b\\\\[^\[(;\s#/]+~'),
+		],
+		function (match)
+		{
+			match[0] = str_replace('.', '::', match[0])
+			return this.package.generateAlias(match[0])
+		}
+		, file)
+	}
+	
+	//	isolate interface and trait name
+	public function isolateInterfaceAndTraitName (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			str_replace('?_>', self.PhpClosingTag, '~\s\b(?:interface|trait)\s\K(?_>[^{]+)~'),
+		],
+		function (match)
+		{
+			return this.package.generateAlias(match[0])
+		}
+		, file)
+	}
+	
+	//	isolate comment
+	public function isolateComment (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			//	comment
+			'~(?|(#|//)([^\r\n]*)|(/\*)(.*?)\*/)~s',
+			//		1		2	 |	1	 2
+		],
+		function (match)
+		{
+			return match[1] . this.package.generateAlias(match[2]) . ((match[1] == '/*') ? '*/' : '')
+		}
+		, file)
+	}
+	
+	//	isolate quoted string and backtick
+	public function isolateQuotedText (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			str_replace('?_>', self.PhpClosingTag,
+			'~(?|(?_>([\'"])(.*?(?<!\\\\)(\\\\\\\\)*)\1)|(`)([^`]*)`)~s'),
+			//			1					2			  1	   2
+		],
+		function (match)
+		{
+			if (match[2] === '') return match[0]
+			return match[1] . this.package.generateAlias(match[2]) . match[1]
+		}
+		, file)
+	}
+	
+	//	isolate heredoc and nowdoc
+	public function isolateDocString (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			//	heredoc n nowdoc
+			str_replace('\s*', self.CommentEscape,
+			'~(<<<[\'"]?(\b\w+\b).+?[\r\n][ \t]*\b\g{-1}\b)()(\s*)([,);\]]?)~s'),
+			//  1           2                              3   4      5
+		],
+		function (match)
+		{
+			return this.package.generateAlias(match[1]) . (match[5] ? match[5] : ';') . match[4]
+		}
+		, file)
+	}
+	
+	//	isolate html part
+	public function isolateHtmlPart (ref file)
+	{
+		file = preg_replace_callback(
+		[
+			str_replace('?_>', self.PhpClosingTag, '~^(?!<\?).+?(?=<\?)|(?<=\?_>).+?(?=<\?)|(?<=\?_>).+?$~s'),
+		],
+		function (match)
+		{
+			return this.package.generateAlias(match[0])
+		}
+		, file)
+	}
+}
+
+var varrefvals = new Varrefvals
+varrefvals.execute(the.argv[1])
