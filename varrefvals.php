@@ -92,11 +92,33 @@ class Varrefvals
 				return;
 			}
 			
+			//	empty argument: find all .var file, recursively
+			if ($file == '')
+			{
+				$dir = getcwd();
+				foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir)) as $path)
+				{
+					if (preg_match('/.*?\.var$/i', $path) && !is_dir($path))
+					{
+						// create .php file from .var file
+						$this->var2php($path);
+					}
+				}
+				$this->message("That's all in " . $dir . "\n");
+				return;
+			}
+			
 		}
 		catch (Exception $e)
 		{
 			$this->message2($e->getMessage());
 		}
+	}
+	
+	//	convert .var file to php file
+	public function var2php ($path)
+	{
+		
 	}
 }
 
@@ -105,20 +127,6 @@ $varrefvals = new Varrefvals;
 $varrefvals->execute($argv[1]);
 
 
-
-if ($argv[1] == '')	//	empty argument: find all .var file, recursively
-{
-	$dir = getcwd();
-	foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir)) as $file)
-	{
-		if (preg_match('/.*\.var/i', $file) && !is_dir($file))
-		{
-			var2php($file);		// create .php file from .var file
-		}
-	}
-	echo "\n", '	That\'s all in ', $dir, "\n";
-	return;
-}
 
 if(!preg_match('/.*\.var/i', $argv[1]))	//	non empty argument: check .var file extension
 {
