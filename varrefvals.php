@@ -212,6 +212,50 @@ class Varrefvals
 		
 		//	28. dot operator
 		$this->replaceDotOperator($file);
+		
+		//	29. statement terminator
+		$this->terminateStatement($file);
+	}
+	
+	//	terminate statement
+	public function terminateStatement (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			//	+ break, continue, return, yield, exit;
+			str_replace('\s*', self::CommentEscape,
+			'~\b(?:break|continue|return|yield|exit)\b\K(?=[ \t]*(;?)(?|[ \t]*(?:(?://|/\*|#)A_\d+_\*?/?)?[ \t]*(;?)[ \t]*[\r\n]|\s*(;?)\s*\}))~'),
+			//											  		  1										         2					 2
+			
+			//	+ return, yield from, = function () {};
+			str_replace('\s*', self::CommentEscape,
+			'~(?:\breturn\b|\byield\b\s\s*\bfrom\b|[^-+/*.%&|<>!=?^]=)\s*(?:\bstatic\b)?\s*\bfunction\b\s*(?:\bref\b|&)?\s*(\((?:(?>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))\s*:?\s*\w*\s*(\{(?:(?>[^{}]+)|(?-1))*\})\K(?=\s*(;?))~'),
+			//																																	1													2					   3  
+			
+			//	+ expression ; \r\n expression			include bug: expression ; }
+			str_replace('\s*', self::CommentEscape,
+			'~(?|(?<!//|#)(?!\b(?i:' . self::Reserved . '|A_\d+_)\b)\$?\b\w+\b()|(?<=->|::)\bclass\b()|[\])\'"`]()|(?:->|::)\s*(\{(?:(?>[^{}]+)|(?-1))*\})|\+\+()|--())\K(?=(?|\s*(;?)()()\s*(?:\?>|\}|$)|[ \t]*(;?)[ \t]*(?:(?://|/\*|#)A_\d+_\*?/?)?[ \t]*(;?)()[ \t]*[\r\n]\s*(?:[\'"`$]|\+\+|--|(?!\b(?:as|instanceof|insteadof|and|x?or)\b)\$?\b\w+\b|(\[(?:(?>[^\[\]]+)|(?-1))*\])\s*=|(\((?:(?>[^()]+)|(?-1))*\))\s*(?:->|::|\())))~'),
+			//															  1			 			1			1								1			   1	1			   2  3 4						 2											 3  4
+			
+			//	+ remove bug:	->{expression ; }	::{expression ; }
+			str_replace('\s*', self::CommentEscape,
+			'~(?:->|::)\s*\{[^{;}]+;\s*\}~'),
+		],
+		function ($match)
+		{
+			//	expression ; \r\n expression
+			if (isset($match[4])) return ($match[2] || $match[3]) ? '' : ';';
+			
+			//	return, yield from, = function () {};
+			if (isset($match[3])) return $match[3] ? '' : ';';
+			
+			//	remove bug:	->{expression ; }	::{expression ; }
+			if (!isset($match[1])) return str_replace(';', '', $match[0]);
+			
+			//	break, continue, return, yield, exit;
+			return ($match[1] || $match[2]) ? '' : ';';
+		}
+		, $file);
 	}
 	
 	//	replace dot operator
