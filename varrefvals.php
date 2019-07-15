@@ -62,11 +62,14 @@ class Varrefvals
 	public function __construct ()
 	{
 		ob_implicit_flush(1);
+		$this->message("Varrefvals (c) 2016 - 2019 Wastono.\n");
 	}
+	
+	private function message ($s) { echo "\n\t", $s; }
+
 }
 
 
-echo "\n	Varrefvals (c) 2016 Wastono.\n";
 
 //	check file extension
 if( $argv[1] == 'varrefvals.php' ) return;	//	skip varrefvals.php
