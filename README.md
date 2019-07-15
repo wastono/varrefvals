@@ -42,7 +42,7 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 
 | No. | Varrefvals code | PHP code |
 |:---:|---|---|
-| 1 | `var counter; counter = 1;` | `$counter = 1;` |
+| 1 | `var counter; counter = 1;` | `$counter; $counter = 1;` |
 | 2 | `var counter = 0;` | `$counter = 0;` |
 | 3 | `var counter, limit, total; counter = 1; limit = 10; total = 0;` | ` $counter = 1; $limit = 10; $total = 0;` |
 | 4 | `global var1; global var2, var3;` | `global $var1; global $var2, $var3;` |
