@@ -197,6 +197,20 @@ class Varrefvals
 		
 		//	23. yield
 		$this->processYieldPart($file);
+		
+		//	24. pairing notation
+		$this->replacePairingNotation($file);
+	}
+	
+	//	replace pairing notation
+	public function replacePairingNotation (&$file)
+	{
+		//	pairing:	key : value
+		$file = preg_replace(
+		[
+			'~[(\[,]\s*[-]?\s*[\'"]?\$?\w+[\'"]?(?:(?:\.|::|->)\$?\w+)*\s*(?:\[[^\]]*\]\s*|\([^)]*\)\s*)*\s*\K:(?![:?])(?=\s*\S)~',
+			//                1                      2      3       4       5    6         7                       
+		], '=>', $file);
 	}
 	
 	//	process yield part
@@ -783,15 +797,6 @@ function var2php($path)
 	
 	//	restore casting
 	$file = preg_replace('/('.$casting.')_C__t__G_/', '($1)', $file);
-	
-	//	replace colon for associative arrays
-	preg_match_all('/[,\[\(]\s*([-]?\s*\d+|<\w+>|[$]?\w+(|[\[\(][^\?]*[\]\)])|([$]?\w+(::|->)[$]?\w+(|[\[\(][^\?]*[\]\)]))+)\s*:(?!:)|as\s+\$\w+\s*:/', $file, $match);
-	if ((bool)$match[0])
-	{
-		$match = array_values(array_unique($match[0]));
-		$match2 = str_replace([':','=>=>'], ['=>','::'], $match);
-		$file = str_replace($match, $match2, $file);
-	}
 	
 	//	restore string literals & comments
 	if ((bool)$comment) $file = str_replace($coarr, $comment, $file);
