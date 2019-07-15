@@ -57,6 +57,13 @@ class ResultPackage
 
 class Varrefvals
 {
+	private const Reserved = 'the|php|fn|stdclass|true|false|null|int|float|boolean|integer|binary|unset|real|double|bool|string|void|iterable|object|resource|mixed|numeric|abstract|and|array|as|break|callable|case|catch|class|clone|const|continue|declare|default|die|do|echo|else|elseif|empty|enddeclare|endfor|endforeach|endif|endswitch|endwhile|eval|exit|extends|final|finally|for|foreach|function|global|goto|if|implements|include|instanceof|insteadof|interface|isset|list|namespace|new|or|print|private|protected|public|require|return|static|switch|throw|trait|try|unset|use|var|while|xor|yield|from';
+	private const SemiReserved = 'constant|sqrt|abs|pack|glob|prev|next|current|min|max|link|dl|chr|log|key|exp|pos|count|file|dir|sin|cos|tan|pi|rand|range|mail|system|defined|header|uniqid|crypt|time|date|hash|microtime|localtime|stat|idate';
+	
+	private const CommentEscape = '(?:(?:#|//|/\*)A_\d+_\*?/?|\s)*';
+	private const CodeEscape = '(?!\bA_\d+_\b|\bX_\w+_\b|\bvals\b|\brefs?\b)';
+	private const CodeEscape2 = '(?!\d+|\b(?:final|abstract|class|interface|trait|function|const|return|goto|global|echo|die|require|require_once|include|include_once|new|clone|throw|use|var|public|private|protected|static|yield|vals|refs?|A_\d+_|X_\w+_)\b)';
+	
 	public $package;
 	
 	public function __construct ()
@@ -218,6 +225,12 @@ class Varrefvals
 		
 		//	30. isolated part
 		$this->restoreIsolatedPart($file);
+		
+		//	write .php file
+		$name = str_replace('.var', '.php', $path);
+		file_put_contents($name , $file);
+		
+		$this->message2("write " . str_replace('.var', '.php', $filename) . "\n");
 	}
 	
 	//	restore isolated part
@@ -903,19 +916,3 @@ class Varrefvals
 $varrefvals = new Varrefvals;
 $varrefvals->execute($argv[1]);
 
-
-
-function echoMessage($text)
-{
-	$now = DateTime::createFromFormat('U.u', microtime(true));
-	echo "\n	", $now->format('Y-m-d H:i:s.u'), " : $text";
-}
-
-function var2php($path)
-{
-	//	write .php file
-	$name = str_replace('.var', '.php', $path);
-	file_put_contents( $name , $file);
-	
-	echoMessage("write $name.\n");
-}
