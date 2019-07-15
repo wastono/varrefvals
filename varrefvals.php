@@ -183,6 +183,76 @@ class Varrefvals
 		
 		//	17. digit space (binary, octal, decimal, float, hexadecimal)
 		$this->removeDigitSpace($file);
+		
+		//	18. properties declaration
+		//	19. variable declaration
+		//	20. global variable
+		$this->processVariableIntro($file);
+	}
+	
+	//	process variable intro
+	public function processVariableIntro (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			str_replace(
+			[
+				'\s*',
+				'\c*',
+			],
+			[
+				self::CommentEscape,
+				self::CodeEscape2,
+			],
+			//	global
+			'~(?|()(\bglobal\b[ \t]+)()()()(\$?\b\w+\b(?:\s*,\s*\b\w+\b)*)((?:\s*;)?)'
+			//   1       2           3 4 5   6                                   7   
+			//        keyword                $name         , buntut              ;   
+			
+			//	properties, variable declaration
+			. '|()(\b(?:var|public|private|protected|static)\b[ \t]+(?:\b(?:public|private|protected|static)\b[ \t]+)?)(\??[ \t]*)((?:[\\\\]?\c*\b[\w\\\\]+\b)?)([ \t]*)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;\r\n]*)*)((?:\s*;)?)'
+			//  1        2                                                                                                3                         4              5      6                                            7   
+			//        keyword                                                                                             ?                       type                    $name          , buntut                      ;
+			
+			//	bare properties
+			. '|((?:(?:\S\s*)?[\r\n]+|[\r\n{};])[ \t]*)()(\??[ \t]*)([\\\\]?\c*\b[\w\\\\]+\b)([ \t]+)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;\r\n]*)*)((?:\s*;)?))~'
+			//          1                              2    3                      4             5     6                                            7     
+			//         cek                                  ?                    type                  $name   , buntut                             ;      
+			),	
+		],
+		function ($match)
+		{
+			if (preg_match('~^[,\[(]~', $match[1])) return $match[0];
+			if (substr($match[2], 0, 3) == 'var' && $match[4] === '') $match[2] = ltrim(substr($match[2], 3));
+			$match[4] = $this->package->isolatePart($match[4]);
+			
+			//	meletakkan tanda ;
+			$match[6] = preg_replace('~('. self::CommentEscape . ')_REPLACED$~', ';$1', $match[6] . '_REPLACED');
+			
+			//	+ bagian $nama + buntut setelah awal property declaration
+			$match[6] = preg_replace_callback(
+			[
+				str_replace('\s*', self::CommentEscape,
+				'~(^|\s*,\s*)(\$?)(\b\w+\b)((?:\s*=\s*(\[(?:(?>[^\[\]]+)|(?-1))*\])?(?>(?:\b\w+\b\s*)+(\((?:(?>[^()]+)|(?-1))*\)))?[^,\r\n]*)?)~'),
+				//	    1      2      3        4                       5                                            6
+				//      ,      $    nama     buntut
+			],
+			function ($found)
+			{
+				$found[2] = '$';
+				$this->package->variable[] = $found[3];
+				$found[5] = '';
+				$found[6] = '';
+				$found[0] = '';
+				return implode($found);
+			}
+			, $match[6]);
+			
+			$match[7] = str_replace(';', '', $match[7]);
+			$match[0] = '';
+			return implode($match);
+		}
+		, $file);
 	}
 	
 	//	remove digit space
@@ -520,28 +590,6 @@ function var2php($path)
 	$file = preg_replace('/(?<=[^\s\w])\s*\(\s*('.$casting.')\s*\)/', ' ${1}_C__t__G_ ', $file);
 	
 	$match = '';
-	
-	//	find variable by var keyword
-	preg_match_all('/(?<=\bvar\s)\s*[^;=]+(?=[;=])/', $file, $match2);
-	if ((bool)$match2[0])
-	{
-		$match .= implode(',' , $match2[0]) . ',';
-	}
-	
-	//	find variable by global keyword
-	preg_match_all('/(?<=\bglobal\s)\s*[^;]+(?=[;])/', $file, $match2);
-	if ((bool)$match2[0])
-	{
-		$match .= implode(',' , $match2[0]) . ',';
-	}
-	
-	//	find variable by static, public, private, protected keywords
-	$find = array('static','public','private','protected');
-	foreach( $find as $value )
-	{
-		preg_match_all('/(?<=\b'. $value .'\s)\s*\w+\s*(?=[;=])/', $file, $match2);
-		if ((bool)$match2[0]) $match .= implode(',' , $match2[0]) . ',';
-	}
 	
 	//	find variable by for keyword
 	preg_match_all('/(?<=\bfor)\s*\(\s*([^;]+)(?=;)/', $file, $match2);
