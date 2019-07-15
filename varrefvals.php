@@ -180,6 +180,23 @@ class Varrefvals
 		//	15. function
 		//	16. fn
 		$this->processFunctionAndFnPart($file);
+		
+		//	17. digit space (binary, octal, decimal, float, hexadecimal)
+		$this->removeDigitSpace($file);
+	}
+	
+	//	remove digit space
+	public function removeDigitSpace (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			'~\d\K (?=\d)|0x[a-f\d][a-f \d]+[a-f\d]~i',
+		],
+		function ($match)
+		{
+			return str_replace(' ', '', $match[0]);
+		}
+		, $file);
 	}
 	
 	//	process function and fn part
