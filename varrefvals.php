@@ -66,9 +66,23 @@ class Varrefvals
 	}
 	
 	private function message ($s) { echo "\n\t", $s; }
-
+	
+	public function execute ($file = '')
+	{
+		try
+		{
+			
+		}
+		catch (Exception $e)
+		{
+			
+		}
+	}
 }
 
+
+$varrefvals = new Varrefvals;
+$varrefvals->execute($argv[1]);
 
 
 //	check file extension
