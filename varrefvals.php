@@ -168,6 +168,31 @@ class Varrefvals
 		
 		//	10. namespace
 		$this->isolateNamespace($file);
+		
+		//	11. catch
+		$this->processCatchPart($file);
+	}
+	
+	//	process catch part
+	public function processCatchPart (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			//	catch
+			str_replace('\s*', self::CommentEscape,
+			'~\bcatch\b\s*\(\K([^)]+?)(\s)(\$?)(\b\w+\b)(?=\s*\))~'),
+			//				    1       2    3     4         
+			//				  type           $    name
+		],
+		function ($match)
+		{
+			$this->package->variable[] = $match[4];
+			$match[3] = '$';
+			$match[1] = $this->package->generateAlias($match[1]);
+			$match[0] = '';
+			return implode($match);
+		}
+		, $file);
 	}
 	
 	//	isolate namespace
@@ -358,10 +383,6 @@ function var2php($path)
 		'$_SESSION',		'$GLOBALS'
 		),
 		$file);
-	
-	//	find variable by catch keyword
-	preg_match_all('/(?<=\bcatch)\s*\(\s*[\w\\\\]+\s+(\w+)/', $file, $match2);
-	if ((bool)$match2[1]) $match .= implode(',' , $match2[1]) . ',';
 	
 	//	find variable by function keyword
 	preg_match_all('/(?<=\bfunction\b)[^\(]*\(\s*([^\{]+)(?=\{)/', $file, $match2);
