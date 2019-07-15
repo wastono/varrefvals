@@ -40,7 +40,7 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 
 ## Conversion
 
-I am not update this section yet. Please see sample.var and compile it to see the conversion result.
+I am not update this section yet. Please see *sample.var* and compile it to see the conversion result.
 
 | No. | Varrefvals code | PHP code |
 |:---:|---|---|
