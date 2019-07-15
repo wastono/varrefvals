@@ -84,6 +84,14 @@ class Varrefvals
 				return;
 			}
 			
+			//	execute .php file
+			if (preg_match('/.*?\.php$/i', $file))
+			{
+				$this->message('Executing ' . $file . "...\n\n");
+				include $file;
+				return;
+			}
+			
 		}
 		catch (Exception $e)
 		{
@@ -97,13 +105,6 @@ $varrefvals = new Varrefvals;
 $varrefvals->execute($argv[1]);
 
 
-
-if(preg_match('/.*\.php/i', $argv[1]))		//	execute .php file
-{
-	echo "\n	Executing $argv[1]...\n\n";
-	include $argv[1];
-	return;
-}
 
 if ($argv[1] == '')	//	empty argument: find all .var file, recursively
 {
