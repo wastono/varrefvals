@@ -24,6 +24,36 @@
 
 //	Varrefvals version 2.0
 
+class ResultPackage
+{
+	private $counter = 0;
+	public $alias = [];
+	public $part = [];
+	public $variable = [];
+	public $falseVariable = [];
+	
+	//	generate alias
+	public function generateAlias (&$part)
+	{
+		$alias = 'A_' . $this->counter++ . '_';
+		array_unshift($this->alias, $alias);
+		array_unshift($this->part, $part);
+		return $alias;
+	}
+	
+	//	isolate text
+	public function isolateText (&$text)
+	{
+		return ($text === '') ? '' : ('X_' . $text . '_');
+	}
+	
+	//	isolate part
+	public function isolatePart (&$part)
+	{
+		if (strpos($part, '\\') !== false) return $this->generateAlias($part);
+		return $this->isolateText($part);
+	}
+}
 
 
 ob_implicit_flush(true);
