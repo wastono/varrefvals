@@ -194,6 +194,33 @@ class Varrefvals
 		
 		//	22. foreach as
 		$this->processForeachAsPart($file);
+		
+		//	23. yield
+		$this->processYieldPart($file);
+	}
+	
+	//	process yield part
+	public function processYieldPart (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			'~\byield\b\s*\K(\$?)((?!\d+|\bfrom\b)\b\w+\b)(\s*)((?:=>|:)?)(\s*)(\$?)((?:\b\w+\b)?)(?=\s*(?:\)|;))~',
+			//                1                      2      3       4       5    6         7                       
+		],
+		function ($match)
+		{
+			$match[1] = '$';
+			$this->package->variable[] = $match[2];
+			if ($match[4]) $match[4] = '=>';
+			if ($match[7])
+			{
+				$match[6] = '$';
+				$this->package->variable[] = $match[7];
+			}
+			$match[0] = '';
+			return implode($match);
+		}
+		, $file);
 	}
 	
 	//	process foreach as part
