@@ -66,16 +66,28 @@ class Varrefvals
 	}
 	
 	private function message ($s) { echo "\n\t", $s; }
+	private function message2 ($s)
+	{
+		$now = DateTime::createFromFormat('U.u', microtime(true));
+		echo "\n\t", $now->format('Y-m-d H:i:s.u'), " : ", $s;
+	}
 	
 	public function execute ($file = '')
 	{
 		try
 		{
+			//	check file
+			//	skip varrefvals.php
+			if( $file == 'varrefvals.php' )
+			{
+				$this->message("skip varrefvals.php file.\n\n");
+				return;
+			}
 			
 		}
 		catch (Exception $e)
 		{
-			
+			$this->message2($e->getMessage());
 		}
 	}
 }
@@ -85,8 +97,6 @@ $varrefvals = new Varrefvals;
 $varrefvals->execute($argv[1]);
 
 
-//	check file extension
-if( $argv[1] == 'varrefvals.php' ) return;	//	skip varrefvals.php
 
 if(preg_match('/.*\.php/i', $argv[1]))		//	execute .php file
 {
