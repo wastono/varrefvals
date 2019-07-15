@@ -15,7 +15,6 @@ I know, it's too *LOL* wanting PHP coding without `$` sign on its variable name.
 7. Set alias variables to write *superglobal* variables.
 8. Use `.` operator to access every method or property, static or not.
 9. Use `:` operator for associative arrays.
-10. Use {} for shortcut of empty object variable declaration.
 
 ## Conversion
 
@@ -57,8 +56,7 @@ I know, it's too *LOL* wanting PHP coding without `$` sign on its variable name.
 | 34 | `static.method(); static.property = 3; var c = static.Constant;` | `static::method(); static::$property = 3; $c = static::Constant;` |
 | 35 | `var z = 1; var a = array(z : 'o'); var a = [z : 'one'];` | `$z = 1; $a = array($z => 'o'); $a = [$z => 'one'];` |
 | 36 | `var a = array(className.Constant : 'o'); var a = [className.Constant : 'one'];` | `$a = array(className::Constant => 'o'); $a = [className::Constant => 'one'];` |
-| 37 | `var o = {};` | `$o = (object)[];` |
-| 38 | `// filename.var is compiled into filename.php` | `// filename.var is compiled into filename.php` |
+| 37 | `// filename.var is compiled into filename.php` | `// filename.var is compiled into filename.php` |
 
 ## Implementation
 
@@ -95,19 +93,19 @@ You can bind the execution with `ctrl + s` or else on your favorite code editor.
 ## License
 
 ```
-Varrefvals. Simple code compiler of no $ sign for PHP.
-Copyright (C) 2016 - 2018 Wastono
+	Varrefvals. Simple code compiler of no $ sign for PHP.
+    Copyright (C) 2016 Wastono
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published
-by the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
 
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ```
