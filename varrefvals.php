@@ -146,6 +146,24 @@ class Varrefvals
 		
 		//	read file content
 		$file = file_get_contents($path);
+		
+		//	1. html
+		$this->isolateHtmlPart($file);
+	}
+	
+	//	isolate html part
+	public function isolateHtmlPart (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			//	html
+			'~^(?!<\?).+?(?=<\?)|(?<=\?>).+?(?=<\?)|(?<=\?>).+?$~s',
+		],
+		function ($match)
+		{
+			return $this->package->generateAlias($match[0]);
+		}
+		, $file);
 	}
 }
 
@@ -163,22 +181,6 @@ function echoMessage($text)
 
 function var2php($path)
 {
-	//	find all html parts
-	$part = array();
-	preg_match_all('/(?<=\?>).*(?=<\?)/s', $file, $html);
-	if ((bool)$html[0])
-	{
-		$html = array_values(array_unique($html[0]));
-		array_multisort(array_map('strlen', $html), SORT_DESC, $html);
-		$len = count($html);
-		for ($i = $len - 1; $i > -1; $i-- )
-		{
-			$part[] = '<_'.$i.'_T__o__N_>';
-		}
-		//	replace html parts temporarily
-		$file = str_replace($html, $part, $file);
-	}
-	
 	//	find all string literals & comments
 	$coarr = array();
 	preg_match_all('~"(?:\\\\.|[^\\\\"])*"|\'(?:\\\\.|[^\\\\\'])*\'|(?:#|//)[^\r\n]*|/\*[\s\S]*?\*/~', $file, $comment);
