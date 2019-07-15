@@ -203,6 +203,68 @@ class Varrefvals
 		
 		//	25. assignment
 		$this->processAssignmentPart($file);
+		
+		//	26. aliases
+		$this->replaceAliases($file);
+	}
+	
+	//	replace aliases
+	public function replaceAliases (&$file)
+	{
+		$file = preg_replace(
+		[
+			'~\bref\b(?:\s+|(?=\())~',		//	2
+			'~\brefs\s+~',		//	3
+			'~\bvals\s+~',		//	4
+			'~\b\s*=\s*\{\}~',	//	5
+			'~\bdserver\b|\bthe\.server\b~',	//	6
+			'~\bdget\b|\bthe\.get\b~',			//	7
+			'~\bdpost\b|\bthe\.post\b~',		//	8
+			'~\bdrequest\b|\bthe\.request\b~',	//	9
+			'~\bdcookie\b|\bthe\.cookie\b~',	//	10
+			'~\bdfiles\b|\bthe\.files\b~',		//	11
+			'~\bdenv\b|\bthe\.env\b~',			//	12
+			'~\bdsession\b|\bthe\.session\b~',	//	13
+			'~\bdglobals\b|\bthe\.globals\b~',	//	14
+			'~\bdhttpresponseheader\b|\bthe\.httpResponseHeader\b~',	//	15
+			'~\bargc\b|\bthe\.argc\b~',		//	16
+			'~\bargv\b|\bthe\.argv\b~',		//	17
+			'~\bdline\b|\bthe\.line\b~',		//	18
+			'~\bdfile\b|\bthe\.file\b~',		//	19
+			'~\bddir\b|\bthe\.dir\b~',			//	20
+			'~\bdfunction\b|\bthe\.function\b~',	//	21
+			'~\bdclass\b|\bthe\.class\b~',		//	22
+			'~\bdtrait\b|\bthe\.trait\b~',		//	23
+			'~\bdmethod\b|\bthe\.method\b~',	//	24
+			'~\bdnamespace\b|\bthe\.namespace\b~',	//	25
+		],
+		[
+			'&',				//	2
+			'&...',				//	3
+			'...',				//	4
+			' = new stdClass',	//	5
+			'$_SERVER',			//	6
+			'$_GET',			//	7
+			'$_POST',			//	8
+			'$_REQUEST',		//	9
+			'$_COOKIE',			//	10
+			'$_FILES',			//	11
+			'$_ENV',			//	12
+			'$_SESSION',		//	13
+			'$_GLOBALS',		//	14
+			'$http_response_header',		//	15
+			'$argc',			//	16
+			'$argv',			//	17
+			'__LINE__',			//	18
+			'__FILE__',			//	19
+			'__DIR__',			//	20
+			'__FUNCTION__',		//	21
+			'__CLASS__',		//	22
+			'__TRAIT__',		//	23
+			'__METHOD__',		//	24
+			'__NAMESPACE__',	//	25
+		]
+		, $file);
 	}
 	
 	//	process assignment part
@@ -730,30 +792,6 @@ function var2php($path)
 	$file = preg_replace('/(?<=[^\s\w])\s*\(\s*('.$casting.')\s*\)/', ' ${1}_C__t__G_ ', $file);
 	
 	$match = '';
-	
-	//	replace var, ref, refs, vals, this, supergobal alias
-	$file = preg_replace(
-		array(
-		'/\bref\s+/',		'/\brefs\s+/',
-		'/\bvals\s+/',		'/\bthis\./',
-		'/\bvar\s+[^=;]+;/',
-		'/\bvar\s+/',		'/\bdserver\b/',
-		'/\bdget\b/',		'/\bdpost\b/',
-		'/\bdrequest\b/',	'/\bdcookie\b/',
-		'/\bdfiles\b/',		'/\bdenv\b/',
-		'/\bdsession\b/',	'/\bdglobals\b/'
-		),
-		array(
-		'&',				'&...',
-		'...',				'$this->',
-		'',
-		'',					'$_SERVER',
-		'$_GET',			'$_POST',
-		'$_REQUEST',		'$_COOKIE',
-		'$_FILES', 			'$_ENV',
-		'$_SESSION',		'$GLOBALS'
-		),
-		$file);
 	
 	//	put $ to variable
 	$match = trim(preg_replace(array('/\s+/', '/,,/'), array('', ','), $match), ',');
