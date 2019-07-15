@@ -200,6 +200,38 @@ class Varrefvals
 		
 		//	24. pairing notation
 		$this->replacePairingNotation($file);
+		
+		//	25. assignment
+		$this->processAssignmentPart($file);
+	}
+	
+	//	process assignment part
+	public function processAssignmentPart (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			str_replace(
+			[
+				'\s*',
+				'\c*',
+			],
+			[
+				self::CommentEscape,
+				self::CodeEscape,
+			],
+			'~((?:\b(?:A_\d+_|X_\w+_)\b[ \t]+|\bconst\b|\bdeclare\b\s*\(\s*)?)(\s*)((?<!->|\.|::)\$?)(\c*\b\w+\b)([ \t]*(\[(?:(?>[^\[\]]+)|(?-1))*\])?)(\s*(?:[-%|+/&.^]|\*\*?|>>|<<|\?\?)?[=])(?![=>])~'),
+			//                  1                                                 2          3               4       5                6                              7              
+		],
+		function ($match)
+		{
+			if ($match[1]) return $match[0];
+			$match[3] = '$';
+			$this->package->variable[] = $match[4];
+			$match[6] = '';
+			$match[0] = '';
+			return implode($match);
+		}
+		, $file);
 	}
 	
 	//	replace pairing notation
@@ -698,15 +730,6 @@ function var2php($path)
 	$file = preg_replace('/(?<=[^\s\w])\s*\(\s*('.$casting.')\s*\)/', ' ${1}_C__t__G_ ', $file);
 	
 	$match = '';
-	
-	//	find variable by for keyword
-	preg_match_all('/(?<=\bfor)\s*\(\s*([^;]+)(?=;)/', $file, $match2);
-	if ((bool)$match2[1])
-	{
-		$match2 = ','.implode(',' , $match2[1]);
-		preg_match_all('/(?<=,)[^=]+(?==)/', $match2, $match2);
-		if ((bool)$match2[0]) $match .= implode(',' , $match2[0]) . ',';
-	}
 	
 	//	replace var, ref, refs, vals, this, supergobal alias
 	$file = preg_replace(
