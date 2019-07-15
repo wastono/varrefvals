@@ -176,6 +176,116 @@ class Varrefvals
 		//	13. use for namespace
 		//	14. use for trait
 		$this->processClassAndUsePart($file);
+		
+		//	15. function
+		//	16. fn
+		$this->processFunctionAndFnPart($file);
+	}
+	
+	//	process function and fn part
+	public function processFunctionAndFnPart (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			str_replace(
+			[
+				'\s*',
+				'\c*',
+			],
+			[
+				self::CommentEscape,
+				self::CodeEscape2,
+			]
+			, '~(?>(\bf(?:unctio)?n\b)(\s*)((?:\bref\b|&)?)(\s*)((?:\c*\b(?>\w+)\b)?)(\s*)(\((?:(?>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))([ \t]*)(:?)([ \t]*)(\??)([ \t]*)((?:\c*(?>[\w\\\\]+))?)(\s*)([{;:=]?))~'),
+			//			   1            2          3         4               5         6                7                                8      9      10    11    12             13           14     15
+			//			   fn                      &                        name                     argument                                   :            ?                   type               buntut
+		],
+		function ($match)
+		{
+			//	arguments		
+			$match[7] = preg_replace_callback(
+			[
+				str_replace(
+				[
+					'\s*',
+					'\c*',
+				],
+				[
+					self::CommentEscape,
+					self::CodeEscape,
+				]
+				, '~(?>([\(,]\s*\??\s*)((?>\c*[\w\\\\]+)?)(\s*&?\s*)((?:\bvals\b|\brefs?\b)?)(\s*[.]*\s*)(\$?)(\c*\b\w+\b)(\s*=?\s*(\[(?:(?>[^\[\]]+)|(?-1))*\])?(?>(?:\b\w+\b\s*)+(\((?:(?>[^()]+)|(?-1))*\)))?(?>[^,\)]+)?))(?=$|[,\)])~'),
+				//             1                2              3                4                  5       6        7          8                  9                                           10
+				//       (,    ?              type             &               ref                ...      $       name      buntut
+			],
+			function ($found)
+			{
+				//	variable type
+				$found[2] = $this->package->isolatePart($found[2]);
+				
+				//	reference
+				if ($found[4]) $found[4] = str_replace(['vals', 'refs', 'ref'], ['...', '&...', '&'], $found[4]);
+				
+				$this->package->variable[] = $found[7];
+				$found[6] = '$';
+				$found[9] = '';
+				$found[10] = '';
+				$found[0] = '';
+				return implode($found);
+			}
+			, $match[7]);
+			
+			//	function / fn name
+			$match[5] = $this->package->isolateText($match[5]);
+			
+			//	return reference
+			if ($match[3]) $match[3] = '&';
+			
+			$isolateReturnType = false;
+			
+			if ($match[1] == 'fn')
+			{
+				if ($match[13])	//	return type
+				{
+					if ($match[15] == ':')	//	buntut
+					{
+						$isolateReturnType = true;
+						$match[15] = '=>';
+						$match[9] = ':';
+					}
+					else if ($match[15] == '=')
+					{
+						$isolateReturnType = true;
+					}
+					else if ($match[9]) $match[9] = '=>';
+				}
+				else if ($match[9]) $match[9] = '=>';
+			}
+			else	//	bagian function
+			{
+				if ($match[15] == '')
+				{
+					if ($match[13] == '')
+					{
+						$match[9] = '';
+						$match[11] = '';
+						$match[8] = ';' . $match[8];
+					}
+					else $match[14] = ';' . $match[14];
+				}
+				if ($match[13])
+				{
+					$match[9] = ':';
+					$isolateReturnType = true;
+				}
+			}
+			
+			if ($isolateReturnType) $match[13] = $this->package->isolatePart($match[13]);
+			
+			$match[0] = '';
+			return implode($match);
+		}
+		, $file);
 	}
 	
 	//	process class and use part
@@ -464,21 +574,6 @@ function var2php($path)
 		'$_SESSION',		'$GLOBALS'
 		),
 		$file);
-	
-	//	find variable by function keyword
-	preg_match_all('/(?<=\bfunction\b)[^\(]*\(\s*([^\{]+)(?=\{)/', $file, $match2);
-	if ((bool)$match2[1])
-	{
-		$match2 = implode(',' , $match2[1]) . ',';
-		$match2 = preg_replace(array(
-			'/\s*=\s*array\s*\([^\)]+\)/',
-			'/\s*=\s*\[[^\]]+\]/',
-			'/\s*=[^,]+/',
-			'/\s*\)\s*use\s*\(/',
-			'/\s*\)\s*[^,]+/'), array('','','',',',''), $match2);
-		preg_match_all('/\b\w+\s*(?=,)/', $match2, $match2);
-		if ((bool)$match2[0]) $match .= implode(',' , $match2[0]);
-	}
 	
 	//	put $ to variable
 	$match = trim(preg_replace(array('/\s+/', '/,,/'), array('', ','), $match), ',');
