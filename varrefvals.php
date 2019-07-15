@@ -128,7 +128,15 @@ class Varrefvals
 	//	convert .var file to php file
 	public function var2php ($path)
 	{
+		$filename = basename($path);
+		$this->message2('start ' . $filename);
 		
+		//	check file
+		if (!file_exists($path))
+		{
+			$this->message2("file is not found!\n\t" . $path . "\n");
+			return;
+		}
 	}
 }
 
@@ -146,15 +154,6 @@ function echoMessage($text)
 
 function var2php($path)
 {
-	echoMessage('start');
-	
-	//	check file
-	if (!file_exists($path))
-	{
-		echoMessage("file is not found!\n	$path\n");
-		return;
-	}
-	
 	//	read file content
 	$file = file_get_contents($path);
 	
