@@ -592,13 +592,16 @@ class Varrefvals
 		function ($match)
 		{
 			if (preg_match('~^[,\[(]~', $match[1])) return $match[0];
-			if (substr($match[2], 0, 3) == 'var' && $match[4] === '') $match[2] = ltrim(substr($match[2], 3));
+			
+			$directIntro = substr($match[2], 0, 3) == 'var' && $match[4] === '';
+			if ($directIntro) $match[2] = ltrim(substr($match[2], 3));
+			
 			$match[4] = $this->package->isolatePart($match[4]);
 			
 			//	put ; sign
 			$match[6] = preg_replace('~('. self::CommentEscape . ')_REPLACED$~', ';$1', $match[6] . '_REPLACED');
 			
-			//	$name + tail after first property declaration
+			//	$name + tail
 			$match[6] = preg_replace_callback(
 			[
 				str_replace(
@@ -614,14 +617,22 @@ class Varrefvals
 				],
 				'~(^|\s*,\s*)(\$?)(\b\c*\w+\b)((?:\s*=\s*(\[(?:(?_>[^\[\]]+)|(?-1))*\])?(?_>(?:\b\c*\w+\b\s*)+(\((?:(?_>[^()]+)|(?-1))*\)))?[^,\r\n]*)?)~'),
 				//	    1      2      3          4                       5                                            6
-				//      ,      $    name       tile  
+				//      ,      $    name       tail  
 			],
-			function ($found)
+			function ($found) use ($directIntro)
 			{
-				$found[2] = '$';
 				$this->package->variable[] = $found[3];
 				$found[5] = '';
 				$found[6] = '';
+				
+				if ($directIntro && $found[4] === '')
+				{
+					$found[1] = rtrim(rtrim($found[1]), ',');
+					$found[2] = '';
+					$found[3] = '';
+				}
+				else $found[2] = '$';
+				
 				$found[0] = '';
 				return implode($found);
 			}
