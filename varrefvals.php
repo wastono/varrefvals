@@ -215,6 +215,17 @@ class Varrefvals
 		
 		//	29. statement terminator
 		$this->terminateStatement($file);
+		
+		//	30. isolated part
+		$this->restoreIsolatedPart($file);
+	}
+	
+	//	restore isolated part
+	public function restoreIsolatedPart (&$file)
+	{
+		$selector = '(\w+)';
+		$file = preg_replace('~(?>\b' . $this->package->isolateText($selector) . '\b)~', '$1', $file);
+		if ($this->package->alias) $file = str_replace($this->package->alias, $this->package->part, $file);
 	}
 	
 	//	terminate statement
@@ -222,22 +233,22 @@ class Varrefvals
 	{
 		$file = preg_replace_callback(
 		[
-			//	+ break, continue, return, yield, exit;
+			//	break, continue, return, yield, exit;
 			str_replace('\s*', self::CommentEscape,
 			'~\b(?:break|continue|return|yield|exit)\b\K(?=[ \t]*(;?)(?|[ \t]*(?:(?://|/\*|#)A_\d+_\*?/?)?[ \t]*(;?)[ \t]*[\r\n]|\s*(;?)\s*\}))~'),
 			//											  		  1										         2					 2
 			
-			//	+ return, yield from, = function () {};
+			//	return, yield from, = function () {};
 			str_replace('\s*', self::CommentEscape,
 			'~(?:\breturn\b|\byield\b\s\s*\bfrom\b|[^-+/*.%&|<>!=?^]=)\s*(?:\bstatic\b)?\s*\bfunction\b\s*(?:\bref\b|&)?\s*(\((?:(?>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))\s*:?\s*\w*\s*(\{(?:(?>[^{}]+)|(?-1))*\})\K(?=\s*(;?))~'),
 			//																																	1													2					   3  
 			
-			//	+ expression ; \r\n expression			include bug: expression ; }
+			//	expression ; \r\n expression			include bug: expression ; }
 			str_replace('\s*', self::CommentEscape,
 			'~(?|(?<!//|#)(?!\b(?i:' . self::Reserved . '|A_\d+_)\b)\$?\b\w+\b()|(?<=->|::)\bclass\b()|[\])\'"`]()|(?:->|::)\s*(\{(?:(?>[^{}]+)|(?-1))*\})|\+\+()|--())\K(?=(?|\s*(;?)()()\s*(?:\?>|\}|$)|[ \t]*(;?)[ \t]*(?:(?://|/\*|#)A_\d+_\*?/?)?[ \t]*(;?)()[ \t]*[\r\n]\s*(?:[\'"`$]|\+\+|--|(?!\b(?:as|instanceof|insteadof|and|x?or)\b)\$?\b\w+\b|(\[(?:(?>[^\[\]]+)|(?-1))*\])\s*=|(\((?:(?>[^()]+)|(?-1))*\))\s*(?:->|::|\())))~'),
 			//															  1			 			1			1								1			   1	1			   2  3 4						 2											 3  4
 			
-			//	+ remove bug:	->{expression ; }	::{expression ; }
+			//	remove bug:	->{expression ; }	::{expression ; }
 			str_replace('\s*', self::CommentEscape,
 			'~(?:->|::)\s*\{[^{;}]+;\s*\}~'),
 		],
@@ -902,21 +913,6 @@ function echoMessage($text)
 
 function var2php($path)
 {
-	//	replace all casting temporaily
-	$casting = 'string|int|integer|bool|boolean|float|double|real|array|object|unset|binary';
-	$file = preg_replace('/(?<=[^\s\w])\s*\(\s*('.$casting.')\s*\)/', ' ${1}_C__t__G_ ', $file);
-	
-	$match = '';
-	
-	//	restore casting
-	$file = preg_replace('/('.$casting.')_C__t__G_/', '($1)', $file);
-	
-	//	restore string literals & comments
-	if ((bool)$comment) $file = str_replace($coarr, $comment, $file);
-	
-	//	restore html parts
-	if ((bool)$html) $file = str_replace($part, $html, $file);
-	
 	//	write .php file
 	$name = str_replace('.var', '.php', $path);
 	file_put_contents( $name , $file);
