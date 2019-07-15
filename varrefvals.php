@@ -149,6 +149,27 @@ class Varrefvals
 		
 		//	1. html
 		$this->isolateHtmlPart($file);
+		
+		//	2. heredoc
+		//	3. nowdoc
+		$this->isolateDocString($file);
+	}
+	
+	//	isolate heredoc and nowdoc
+	public function isolateDocString (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			//	heredoc n nowdoc
+			str_replace('\s*', self::CommentEscape,
+			'~(<<<[\'"]?(\b\w+\b).+?[\r\n][ \t]*\b\g{-1}\b)()(\s*)([,);\]]?)~s'),
+			//  1           2                              3   4      5
+		],
+		function ($match)
+		{
+			return $this->package->generateAlias($match[1]) . ($match[5] ? $match[5] : ';') . $match[4];
+		}
+		, $file);
 	}
 	
 	//	isolate html part
