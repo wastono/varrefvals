@@ -2,19 +2,41 @@
 
 I know, it's too *LOL* wanting PHP coding without `$` sign on its variable name. But, writing code with `$` sign on every variable is adding typing complexity, for me. I wish I could do coding using simple syntax only. So I decided to design and write simple program that can be used for compiling no `$` sign code into normal PHP code.
 
+Now, I add the *LOL* level by adding feature: coding without `=>` `::` `->` `;` signs too.
+
 **Varrefvals**, that's the name that I use for this program. It comes from 3 selected keywords: `var`, `ref`, and `vals`. `var` keyword is used as direct variable declaration. `ref` keyword is used for setting variable accessed by reference. `vals` keyword is used for setting variables accessed by value.
 
-## Coding Specification
+Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Varrefvals codes with some exceptions due to Features and Needs stated below.
 
-1. Use `var` keyword for direct variable declaration.
-2. Detect variable declaration from keywords: `global`, `static`, `public`, `private`, `protected`, `for`, `foreach`, `list`, `catch`, `function`, `use`.
-3. Use `ref` keyword to set variable accessed by reference.
-4. Use `refs` keyword to set variables accessed by reference.
-5. Use `vals` keyword to set variables accessed by value.
-6. Use `this` keyword to access own object properties or methods.
-7. Set alias variables to write *superglobal* variables.
-8. Use `.` operator to access every method or property, static or not.
-9. Use `:` operator for associative arrays.
+## Features:
+
+1. Variable name can be written without `$` sign.
+2. The end of statement line can be written without `;` sign.
+3. Methods and properties can be accessed using `.` sign.
+4. Associative pairing can be written using `:` sign.
+5. Empty object variable can be declared using `{}` signs.
+6. Digit separator can be written using *single space* character.
+7. Return type of `function` / `fn` can be written without `:` sign.
+8. Arrow on `fn` can be replaced by `:` sign.
+9. Variable can be declared directly using `var` keyword.
+10. Variable names can be detected from  *properties declaration*, *assignment*, and *keywords*: `global`, `foreach` `as`, `list`, `yield`, `catch`, `function`, `fn`, `use`.
+11. Keyword `ref` can be used for declaring *expression* accessed by reference.
+12. Keyword `refs` can be used for declaring *expressions* accessed by reference.
+13. Keyword `vals` can be used for declaring *expressions* accessed by value.
+14. Some *superglobal* variables are aliased.
+
+## Needs:
+
+1. Properties and arguments of `function`, `fn`, and `use` keywords need to be written in one line, or separated by different line after `=` or `,` signs.
+2. Class and constant names need to be started by *upper cased* alphabet.
+3. Variable, property, and method names need to be started by *lower cased* alphabet.
+4. Methods need to be followed by `()` signs.
+5. Variable name needs to be different from keywords and function names.
+6. Variables and properties declarations need to be simple. Use complex statement separately from variable declaration.
+7. Dot operator for string concatenation needs to be separated from *expressions* by *space* characters.
+8. Dot operator for object needs to be without space next to the property or method name.
+9. Instance, special variable (`this`, `self`, `static`, `parent`), and class name can be separated from dot operator on the next line of statement.
+10. Accessing object, property, or method name within variable should not be used. Please use `{ *expression* }` instead.
 
 ## Conversion
 
@@ -93,7 +115,7 @@ You can bind the execution with `ctrl + s` or else on your favorite code editor.
 ## License
 
 ```
-	Varrefvals. Simple code compiler of no $ sign for PHP.
+	Varrefvals. Simple code compiler for PHP code written without $ => :: -> ; signs.
     Copyright (C) 2016 Wastono
 
     This program is free software: you can redistribute it and/or modify
