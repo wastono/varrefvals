@@ -28,7 +28,7 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 ## Needs:
 
 1. Properties and arguments of `function`, `fn`, and `use` keywords need to be written in one line, or separated by different line after `=` or `,` signs.
-2. Class and constant names need to be started by *upper cased* alphabet.
+2. Constant names need to be started by *upper cased* alphabet.
 3. Variable, property, and method names need to be started by *lower cased* alphabet.
 4. Methods need to be followed by `()` signs.
 5. Variable name needs to be different from keywords and function names.
