@@ -137,6 +137,15 @@ class Varrefvals
 			$this->message2("file is not found!\n\t" . $path . "\n");
 			return;
 		}
+		
+		//	result package
+		$this->package = new ResultPackage;
+		
+		//	add special variable
+		$this->package->variable[] = 'this';
+		
+		//	read file content
+		$file = file_get_contents($path);
 	}
 }
 
@@ -154,9 +163,6 @@ function echoMessage($text)
 
 function var2php($path)
 {
-	//	read file content
-	$file = file_get_contents($path);
-	
 	//	find all html parts
 	$part = array();
 	preg_match_all('/(?<=\?>).*(?=<\?)/s', $file, $html);
