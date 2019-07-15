@@ -115,7 +115,7 @@ You can bind the execution with `ctrl + s` or else on your favorite code editor.
 ## License
 
 ```
-	Varrefvals. Simple code compiler for PHP code written without $ => :: -> ; signs.
+    Varrefvals. Simple code compiler for PHP code written without $ => :: -> ; signs.
     Copyright (C) 2016 Wastono
 
     This program is free software: you can redistribute it and/or modify
