@@ -408,7 +408,7 @@ class Varrefvals
 			'$_FILES',			//	11
 			'$_ENV',			//	12
 			'$_SESSION',		//	13
-			'$_GLOBALS',		//	14
+			'$GLOBALS',		//	14
 			'$http_response_header',		//	15
 			'$argc',			//	16
 			'$argv',			//	17
