@@ -171,6 +171,87 @@ class Varrefvals
 		
 		//	11. catch
 		$this->processCatchPart($file);
+		
+		//	12. class (extends, implements)
+		//	13. use for namespace
+		//	14. use for trait
+		$this->processClassAndUsePart($file);
+	}
+	
+	//	process class and use part
+	public function processClassAndUsePart (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			//	class (extends, implements) n use for namespace
+			str_replace('\s*', self::CommentEscape,
+			'~(?|\s\K(\bclass\b)(\s\s*)([^{]+)(\{(?:(?>[^{}]+)|(?-1))*\})|\s\K(\buse\b)(\s*)((?:\s*,?\s*(?!\()[\w\\\\]+)+)(\s*)((?:\{[^}]+\})?)(\s*)(;?))~'),
+			//            1        2      3              4               |        1      2               3                  4       5            6   7    
+			//			class            name          body              |       use                    name                       item              ;    
+		],
+		function ($match)
+		{
+			if ($match[0][0] == 'c')	//	class
+			{
+				$match[4] = preg_replace_callback(
+				[
+					//	use in class for trait related
+					str_replace('\s*', self::CommentEscape,
+					'~(?>\s\buse\b\s*)\K((?>\s*,?\s*(?!\()\b\w+\b)+)(\s*)(;?)((?>\{[^}]+\})?)~'),
+					//					              1               2   3          4
+					//							     name                 ;         item
+				],
+				function ($found)
+				{
+					$found[1] = $this->package->generateAlias($found[1]);
+					$found[3] = '';
+					
+					if ($found[4] == '') $found[2] = ';' . $found[2];
+					else $found[4] = preg_replace_callback(
+					[
+						//	trait item part
+						str_replace('\s*', self::CommentEscape,
+						'~(?>\{?\s*)\K((?>\b[\w:.]+\b))(\s\s*)((?>\b\w+\b\s*,?\s*)+)(;?)~'),
+						//					  1		          2           3                     4
+						//					nama                        nama                    ;
+					],
+					function ($got)
+					{
+						$got[3] = str_replace('.', '::', $got[1]) . $got[2] . $got[3];
+						$got[2] = '';
+						$got[1] = '';
+						$got[4] = ';';
+						$got[3] = $this->package->generateAlias($got[3]);
+						$got[0] = '';
+						return implode($got);
+					}
+					, $found[4]);
+					
+					$found[0] = '';
+					return implode($found);
+				}
+				, $match[4]);
+			}
+			else	//	use, namespace related
+			{
+				if ($match[5]) $match[6] = ';' . $match[6];
+				else
+				{
+					$match[6] = ';' . $match[4] . $match[6];
+					$match[4] = '';
+				}
+				
+				$match[7] = '';
+				$match[3] = $match[3] . $match[4] . $match[5];
+				$match[4] = '';
+				$match[5] = '';
+			}
+			
+			$match[3] = $this->package->generateAlias($match[3]);
+			$match[0] = '';
+			return implode($match);
+		}
+		, $file);
 	}
 	
 	//	process catch part
