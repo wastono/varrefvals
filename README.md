@@ -40,11 +40,13 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 
 ## Conversion
 
+I am not update this section yet. Please see sample.var and compile it to see the conversion result.
+
 | No. | Varrefvals code | PHP code |
 |:---:|---|---|
-| 1 | `var counter; counter = 1;` | `$counter; $counter = 1;` |
+| 1 | `var counter; counter = 1;` | `; $counter = 1;` |
 | 2 | `var counter = 0;` | `$counter = 0;` |
-| 3 | `var counter, limit, total; counter = 1; limit = 10; total = 0;` | ` $counter = 1; $limit = 10; $total = 0;` |
+| 3 | `var counter, limit, total; counter = 1; limit = 10; total = 0;` | `; $counter = 1; $limit = 10; $total = 0;` |
 | 4 | `global var1; global var2, var3;` | `global $var1; global $var2, $var3;` |
 | 5 | `public prop1; private prop2; protected prop3; static prop4;` | `public $prop1; private $prop2; protected $prop3; static $prop4;` |
 | 6 | `public static prop1; private static prop2; protected static prop3;` | `public static $prop1; private static $prop2; protected static $prop3;` |
