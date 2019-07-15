@@ -153,6 +153,47 @@ class Varrefvals
 		//	2. heredoc
 		//	3. nowdoc
 		$this->isolateDocString($file);
+		
+		//	4. single quoted string
+		//	5. double quoted string
+		//	6. backtick operator
+		$this->isolateQuotedText($file);
+		
+		//	7. comment
+		$this->isolateComment($file);
+	}
+	
+	//	isolate comment
+	public function isolateComment (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			//	comment
+			'~(?|(#|//)([^\r\n]*)|(/\*)(.*?)\*/)~s',
+			//		1		2	 |	1	 2
+		],
+		function ($match)
+		{
+			return $match[1] . $this->package->generateAlias($match[2]) . (($match[1] == '/*') ? '*/' : '');
+		}
+		, $file);
+	}
+	
+	//	isolate quoted string and backtick
+	public function isolateQuotedText (&$file)
+	{
+		$file = preg_replace_callback(
+		[
+			//	single n double quoted string, backtick operator
+			'~(?|(?>([\'"])(.*?(?<!\\\\)(\\\\\\\\)*)\1)|(`)([^`]*)`)~s',
+			//			1					2			 1	  2
+		],
+		function ($match)
+		{
+			if ($match[2] === '') return $match[0];
+			return $match[1] . $this->package->generateAlias($match[2]) . $match[1];
+		}
+		, $file);
 	}
 	
 	//	isolate heredoc and nowdoc
@@ -202,22 +243,6 @@ function echoMessage($text)
 
 function var2php($path)
 {
-	//	find all string literals & comments
-	$coarr = array();
-	preg_match_all('~"(?:\\\\.|[^\\\\"])*"|\'(?:\\\\.|[^\\\\\'])*\'|(?:#|//)[^\r\n]*|/\*[\s\S]*?\*/~', $file, $comment);
-	if ((bool)$comment[0])
-	{
-		$comment = array_values(array_unique($comment[0]));
-		array_multisort(array_map('strlen', $comment), SORT_DESC, $comment);
-		$len = count($comment);
-		for ($i = $len - 1; $i > -1; $i-- )
-		{
-			$coarr[] = '<_'.$i.'_W__a__S_>';
-		}
-		//	replace string literals & comments temporarily
-		$file = str_replace($comment, $coarr, $file);
-	}
-	
 	//	replace all casting temporaily
 	$casting = 'string|int|integer|bool|boolean|float|double|real|array|object|unset|binary';
 	$file = preg_replace('/(?<=[^\s\w])\s*\(\s*('.$casting.')\s*\)/', ' ${1}_C__t__G_ ', $file);
