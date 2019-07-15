@@ -305,9 +305,9 @@ class Varrefvals
 	{
 		$file = preg_replace_callback(
 		[
-			//	.class	.Constant
+			//	.Constant
 			str_replace('\s*', self::CommentEscape,
-			'~[\w)}]\s*\K\.(?=\b(?:class\b|\b[A-Z]))~'),
+			'~[\w)}]\s*\K\.(?=\b[A-Z])~'),
 			
 			//	instance.
 			str_replace('\s*', self::CommentEscape,
@@ -315,16 +315,22 @@ class Varrefvals
 			
 			//	notInstance.
 			str_replace('\s*', self::CommentEscape,
-			'~(?<!\$)\b[_a-zA-Z]\w*\b\s*\.(?|(\{)|\$?\b[_a-zA-Z]\w*\b\s*(\(?))~'),
-			//								  1						      1
+			'~(?<!\$)\b[_a-zA-Z]\w*\b\s*\.(?|()(\{)|(\$?\b[_a-zA-Z]\w*\b)\s*(\(?))~'),
+			//								 1  2  |	1					  2
 		],
 		function ($match)
 		{
-			//	.class	.Constant
+			//	.Constant
 			if ($match[0] == '.') return '::';
 			
 			//	notInstance.
-			if (isset($match[1])) return str_replace('.', ($match[1] ? '::' : '::$'), $match[0]);
+			if (isset($match[2]))
+			{
+				if ($match[2] === '' && $match[1] != 'class') $match[1] = '::$';
+				else $match[1] = '::';
+				
+				return str_replace('.', $match[1], $match[0]);
+			}
 			
 			//	instance.
 			return str_replace('.', '->', $match[0]);
