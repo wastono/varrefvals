@@ -145,8 +145,8 @@ There is no error handling when compiling. There are two possibilities: syntax e
 Execute **varrefvals.php** with optional file name parameter. Do something like this:
 
 ```
-	> cd path/to/var/file
-	> php -f path/to/varrefvals.php -- "file.var"
+	> cd "path/to/var/file"
+	> "path/to/binary/of/php" -f "path/to/varrefvals.php" -- "file.var"
 ```
 
 It will create *file.php* in *path/to/var/file* directory.
@@ -154,11 +154,18 @@ It will create *file.php* in *path/to/var/file* directory.
 Fill empty file name parameter for compiling all **.var** files inside current directory, recursively:
 
 ```
-	> cd path/to/var/file
-	> php -f path/to/varrefvals.php -- ""
+	> cd "path/to/var/file"
+	> "path/to/binary/of/php" -f "path/to/varrefvals.php" -- ""
 ```
 
 You can bind the execution with `ctrl + s` or else on your favorite code editor.
+
+If you add an argument *path/to/binary/of/php*, the syntax of generated .php file will be checked too.
+
+```
+	> cd "path/to/var/file"
+	> "path/to/binary/of/php" -f "path/to/varrefvals.php" -- "file.var" "path/to/binary/of/php"
+```
 
 ## Known Issues
 
