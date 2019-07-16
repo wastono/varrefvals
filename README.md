@@ -158,6 +158,11 @@ Fill empty file name parameter for compiling all **.var** files inside current d
 
 You can bind the execution with `ctrl + s` or else on your favorite code editor.
 
+## Known Issues
+
+* If there is PHP closing tag inside string, backtick, or comment, the part next to it will be detected as HTML code and not be converted.
+* End of statement line is only checked with the next code that located in the same PHP tag.
+
 ## License
 
 ```
