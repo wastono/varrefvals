@@ -18,13 +18,13 @@ class ClassName
 	
 	public function method1 ()
 	{
-		echo 'this is method 1.', "\n";
+		echo 'this is method 1.' . "\n";
 		self::method2();
 	}
 	
 	public static function method2 () :string
 	{
-		echo 'this is content of property 7: ', self::$property7, "\n";
+		echo 'this is content of property 7: ' . self::$property7 . "\n";
 		return '';
 	}
 	
@@ -48,8 +48,13 @@ var_dump($variable4->property8);
 $variable5 = new stdClass;
 $variable5->newProperty1 = 0x1A2B3C4D;		//	0x1A2B3C4D
 $variable5->newProperty2 = '';
+$variable5->newProperty3 = new ClassName;
 
 var_dump($variable5);
+echo $variable5
+	->newProperty3
+	::Constant1
+	, "\n";
 
 try
 {
@@ -73,7 +78,11 @@ list($d, $e) = ['d', 'e'];
 
 echo $d, $e, $f, $g, $h, $i, "\n";
 
-$variable8 = function (& $x) use ($d) :int
+$variable8 = function (
+	& $x,
+	$y = 0.123456,
+	$z = [1.2, 3.4, 5.6]
+) use ($d) :int
 {
 	//	yield x : d
 	echo $d, "\n";
