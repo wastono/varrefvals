@@ -65,6 +65,7 @@ class Varrefvals
 	private const CodeEscape2 = '(?!\d+|\b(?:else|if|stdclass|true|false|null|final|abstract|class|interface|trait|function|const|return|goto|global|echo|die|require|require_once|include|include_once|new|clone|throw|use|var|public|private|protected|static|yield|vals|refs?|A_\d+_|X_\w+_)\b)';
 	
 	private const PhpClosingTag = '?' . '>';
+	private $phpBinary;
 	
 	public $package;
 	
@@ -81,10 +82,12 @@ class Varrefvals
 		echo "\n\t", $now->format('Y-m-d H:i:s.u'), " : ", $s;
 	}
 	
-	public function execute ($file = '')
+	public function execute ($file = '', $phpBinary = '')
 	{
 		try
 		{
+			$this->phpBinary = $phpBinary;
+			
 			//	check file
 			//	skip varrefvals.php
 			if ($file == 'varrefvals.php')
@@ -97,7 +100,12 @@ class Varrefvals
 			if (preg_match('/.*?\.php$/i', $file))
 			{
 				$this->message('Executing ' . $file . "...\n\n");
-				include $file;
+				if ($phpBinary)
+				{
+					$this->processFile($file);
+					$this->processFile($file, false);
+				}
+				else include $file;
 				return;
 			}
 			
@@ -229,7 +237,25 @@ class Varrefvals
 		$name = str_replace('.var', '.php', $path);
 		file_put_contents($name , $file);
 		
-		$this->message2("write " . str_replace('.var', '.php', $filename) . "\n");
+		$this->message2("write " . str_replace('.var', '.php', $filename));
+		
+		//	check code syntax
+		$this->processFile($name);
+	}
+	
+	//	execute file
+	public function processFile (&$path, $checkSyntaxOnly = true)
+	{
+		if ($this->phpBinary)
+		{
+			$output = [];
+			exec('"' . $this->phpBinary . '"' . ($checkSyntaxOnly ? ' -l' : '') . ' -f "' . $path . '"', $output);
+			foreach ($output as $value)
+			{
+				$this->message2($value);
+			}
+			$this->message('');
+		}
 	}
 	
 	//	restore isolated part
