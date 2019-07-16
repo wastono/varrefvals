@@ -8,7 +8,7 @@ Now, I add the *LOL* level by adding feature: coding without `=>` `::` `->` `;` 
 
 Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Varrefvals codes with some exceptions due to Features and Needs stated below.
 
-## Features:
+## Features
 
 1. Variable name can be written without `$` sign.
 2. The end of statement line can be written without `;` sign.
@@ -23,9 +23,9 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 11. Keyword `ref` can be used for declaring *expression* accessed by reference.
 12. Keyword `refs` can be used for declaring *expressions* accessed by reference.
 13. Keyword `vals` can be used for declaring *expressions* accessed by value.
-14. Some *superglobal* variables are aliased.
+14. Some predefined variables and magic constants are aliased.
 
-## Needs:
+## Needs
 
 1. Properties and arguments of `function`, `fn`, and `use` keywords need to be written in one line, or separated by different line after `=` or `,` signs.
 2. Constant names need to be started by *upper cased* alphabet.
@@ -37,6 +37,51 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 8. Dot operator for object needs to be without space next to the property or method name.
 9. Instance, special variable (`this`, `self`, `static`, `parent`), and class name can be separated from dot operator on the next line of statement.
 10. Accessing object, property, or method name within variable should not be used. Please use `{ expression }` instead.
+
+## Aliases
+
+| No. | Varrefvals code | PHP code |
+|:---:|---|---|
+| 1 | `dserver` | `$_SERVER` |
+| 2 | `the.server` | `$_SERVER` |
+| 3 | `dget` | `$_GET` |
+| 4 | `the.get` | `$_GET` |
+| 5 | `dpost` | `$_POST` |
+| 6 | `the.post` | `$_POST` |
+| 7 | `drequest` | `$_REQUEST` |
+| 8 | `the.request` | `$_REQUEST` |
+| 9 | `dcookie` | `$_COOKIE` |
+| 10 | `the.cookie` | `$_COOKIE` |
+| 11 | `dfiles` | `$_FILES` |
+| 12 | `the.files` | `$_FILES` |
+| 13 | `denv` | `$_ENV` |
+| 14 | `the.env` | `$_ENV` |
+| 15 | `dsession` | `$_SESSION` |
+| 16 | `the.session` | `$_SESSION` |
+| 17 | `dglobals` | `$GLOBALS` |
+| 18 | `the.globals` | `$GLOBALS` |
+| 19 | `dhttpResponseHeader` | `$http_response_header` |
+| 20 | `the.httpResponseHeader` | `$http_response_header` |
+| 21 | `dargc` | `$argc` |
+| 22 | `the.argc` | `$argc` |
+| 23 | `dargv` | `$argv` |
+| 24 | `the.argv` | `$argv` |
+| 25 | `dline` | `__LINE__` |
+| 26 | `the.line` | `__LINE__` |
+| 27 | `dfile` | `__FILE__` |
+| 28 | `the.file` | `__FILE__` |
+| 29 | `ddir` | `__DIR__` |
+| 30 | `the.dir` | `__DIR__` |
+| 31 | `dfunction` | `__FUNCTION__` |
+| 32 | `the.function` | `__FUNCTION__` |
+| 33 | `dclass` | `__CLASS__` |
+| 34 | `the.class` | `__CLASS__` |
+| 35 | `dtrait` | `__TRAIT__` |
+| 36 | `the.trait` | `__TRAIT__` |
+| 37 | `dmethod` | `__METHOD__` |
+| 38 | `the.method` | `__METHOD__` |
+| 39 | `dnamespace` | `__NAMESPACE__` |
+| 40 | `the.namespace` | `__NAMESPACE__` |
 
 ## Conversion
 
