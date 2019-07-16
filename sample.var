@@ -62,7 +62,7 @@ class Varrefvals
 	
 	private const CommentEscape = '(?:(?:#|//|/\*)A_\d+_\*?/?|\s)*'
 	private const CodeEscape = '(?!\bA_\d+_\b|\bX_\w+_\b|\bvals\b|\brefs?\b)'
-	private const CodeEscape2 = '(?!\d+|\b(?:else|if|final|abstract|class|interface|trait|function|const|return|goto|global|echo|die|require|require_once|include|include_once|new|clone|throw|use|var|public|private|protected|static|yield|vals|refs?|A_\d+_|X_\w+_)\b)'
+	private const CodeEscape2 = '(?!\d+|\b(?:else|if|stdclass|true|false|null|final|abstract|class|interface|trait|function|const|return|goto|global|echo|die|require|require_once|include|include_once|new|clone|throw|use|var|public|private|protected|static|yield|vals|refs?|A_\d+_|X_\w+_)\b)'
 	
 	private const PhpClosingTag = '?' . '>'
 	
