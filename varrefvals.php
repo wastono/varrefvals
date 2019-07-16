@@ -33,7 +33,7 @@ class ResultPackage
 	public $falseVariable = [];
 	
 	//	generate alias
-	public function generateAlias (&$part)
+	public function generateAlias (& $part)
 	{
 		$alias = 'A_' . $this->counter++ . '_';
 		array_unshift($this->alias, $alias);
@@ -42,13 +42,13 @@ class ResultPackage
 	}
 	
 	//	isolate text
-	public function isolateText (&$text)
+	public function isolateText (& $text)
 	{
 		return ($text === '') ? '' : ('X_' . $text . '_');
 	}
 	
 	//	isolate part
-	public function isolatePart (&$part)
+	public function isolatePart (& $part)
 	{
 		if (strpos($part, '\\') !== false) return $this->generateAlias($part);
 		return $this->isolateText($part);
@@ -244,7 +244,7 @@ class Varrefvals
 	}
 	
 	//	execute file
-	public function processFile (&$path, $checkSyntaxOnly = true)
+	public function processFile (& $path, $checkSyntaxOnly = true)
 	{
 		if ($this->phpBinary)
 		{
@@ -259,7 +259,7 @@ class Varrefvals
 	}
 	
 	//	restore isolated part
-	public function restoreIsolatedPart (&$file)
+	public function restoreIsolatedPart (& $file)
 	{
 		$selector = '(\w+)';
 		$file = preg_replace('~(' . self::PhpClosingTag . '\b' . $this->package->isolateText($selector) . '\b)~', '$1', $file);
@@ -267,7 +267,7 @@ class Varrefvals
 	}
 	
 	//	terminate statement
-	public function terminateStatement (&$file)
+	public function terminateStatement (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -324,7 +324,7 @@ class Varrefvals
 	}
 	
 	//	replace dot operator
-	public function replaceDotOperator (&$file)
+	public function replaceDotOperator (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -362,7 +362,7 @@ class Varrefvals
 	}
 	
 	//	variablilize
-	public function variablilize (&$file)
+	public function variablilize (& $file)
 	{
 		$this->package->variable = array_filter(preg_replace_callback('~^(?i:' . self::Reserved . ')$~',
 		function ($match)
@@ -395,7 +395,7 @@ class Varrefvals
 	}
 	
 	//	replace aliases
-	public function replaceAliases (&$file)
+	public function replaceAliases (& $file)
 	{
 		$file = preg_replace(
 		[
@@ -413,8 +413,8 @@ class Varrefvals
 			'~\bdsession\b|\bthe\.session\b~',	//	13
 			'~\bdglobals\b|\bthe\.globals\b~',	//	14
 			'~\bdhttpresponseheader\b|\bthe\.httpResponseHeader\b~',	//	15
-			'~\bargc\b|\bthe\.argc\b~',		//	16
-			'~\bargv\b|\bthe\.argv\b~',		//	17
+			'~\bdargc\b|\bthe\.argc\b~',		//	16
+			'~\bdargv\b|\bthe\.argv\b~',		//	17
 			'~\bdline\b|\bthe\.line\b~',		//	18
 			'~\bdfile\b|\bthe\.file\b~',		//	19
 			'~\bddir\b|\bthe\.dir\b~',			//	20
@@ -454,7 +454,7 @@ class Varrefvals
 	}
 	
 	//	process assignment part
-	public function processAssignmentPart (&$file)
+	public function processAssignmentPart (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -485,7 +485,7 @@ class Varrefvals
 	}
 	
 	//	replace pairing notation
-	public function replacePairingNotation (&$file)
+	public function replacePairingNotation (& $file)
 	{
 		//	pairing:	key : value
 		$file = preg_replace(
@@ -494,7 +494,7 @@ class Varrefvals
 	}
 	
 	//	process foreach as part
-	public function processForeachAsPart (&$file)
+	public function processForeachAsPart (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -522,7 +522,7 @@ class Varrefvals
 	}
 	
 	//	process list part
-	public function processListPart (&$file)
+	public function processListPart (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -563,7 +563,7 @@ class Varrefvals
 	}
 	
 	//	process variable intro
-	public function processVariableIntro (&$file)
+	public function processVariableIntro (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -618,8 +618,8 @@ class Varrefvals
 					self::CodeEscape2,
 					self::PhpClosingTag,
 				],
-				'~(^|\s*,\s*)(\$?)(\b\c*\w+\b)((?:\s*=\s*(\[(?:(?_>[^\[\]]+)|(?-1))*\])?(?_>(?:\b\c*\w+\b\s*)+(\((?:(?_>[^()]+)|(?-1))*\)))?[^,\r\n]*)?)~'),
-				//	    1      2      3          4                       5                                            6
+				'~(^|\s*,\s*)(\$?)(\b\c*\w+\b)((?:\s*=\s*(?:[^,\[({;]+|(\[(?:(?_>[^\[\]]+)|(?-1))*\])|(\((?:(?_>[^()]+)|(?-1))*\))|(\{(?:(?_>[^{}]+)|(?-1))*\}))+)?)~'),
+				//	    1      2      3          4                               5                               6                             7
 				//      ,      $    name       tail  
 			],
 			function ($found) use ($directIntro)
@@ -627,6 +627,7 @@ class Varrefvals
 				$this->package->variable[] = $found[3];
 				$found[5] = '';
 				$found[6] = '';
+				$found[7] = '';
 				
 				if ($directIntro && $found[4] === '')
 				{
@@ -649,7 +650,7 @@ class Varrefvals
 	}
 	
 	//	remove digit space
-	public function removeDigitSpace (&$file)
+	public function removeDigitSpace (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -663,7 +664,7 @@ class Varrefvals
 	}
 	
 	//	process function and fn part
-	public function processFunctionAndFnPart (&$file)
+	public function processFunctionAndFnPart (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -698,8 +699,8 @@ class Varrefvals
 					self::CodeEscape,
 					self::PhpClosingTag,
 				]
-				, '~(?_>([\(,]\s*\??\s*)((?_>\c*[\w\\\\]+)?)(\s*&?\s*)((?:\bvals\b|\brefs?\b)?)(\s*[.]*\s*)(\$?)(\c*\b\w+\b)(\s*=?\s*(\[(?:(?_>[^\[\]]+)|(?-1))*\])?(?_>(?:\b\w+\b\s*)+(\((?:(?_>[^()]+)|(?-1))*\)))?(?_>[^,\)]+)?))(?=$|[,\)])~'),
-				//             1                2              3                4                  5         6        7          8                  9                                           10
+				, '~(?_>([\(,]\s*\??\s*)((?_>\c*[\w\\\\]+)?)(\s*&?\s*)((?:\bvals\b|\brefs?\b)?)(\s*[.]*\s*)(\$?)(\c*\b\w+\b)((?:\s*=\s*(?:[^,\[({)]+|(\[(?:(?_>[^\[\]]+)|(?-1))*\])|(\((?:(?_>[^()]+)|(?-1))*\))|(\{(?:(?_>[^{}]+)|(?-1))*\}))+)?))~'),
+				//             1                2              3                4                  5         6        7          8                             9                             10                          11                  
 				//       (,    ?              type             &               ref                ...        $       name       tail
 			],
 			function ($found)
@@ -714,6 +715,7 @@ class Varrefvals
 				$found[6] = '$';
 				$found[9] = '';
 				$found[10] = '';
+				$found[11] = '';
 				$found[0] = '';
 				return implode($found);
 			}
@@ -773,7 +775,7 @@ class Varrefvals
 	}
 	
 	//	process class and use part
-	public function processClassAndUsePart (&$file)
+	public function processClassAndUsePart (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -873,7 +875,7 @@ class Varrefvals
 	}
 	
 	//	process catch part
-	public function processCatchPart (&$file)
+	public function processCatchPart (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -895,7 +897,7 @@ class Varrefvals
 	}
 	
 	//	isolate namespace
-	public function isolateNamespace (&$file)
+	public function isolateNamespace (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -912,7 +914,7 @@ class Varrefvals
 	}
 	
 	//	isolate interface and trait name
-	public function isolateInterfaceAndTraitName (&$file)
+	public function isolateInterfaceAndTraitName (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -926,7 +928,7 @@ class Varrefvals
 	}
 	
 	//	isolate comment
-	public function isolateComment (&$file)
+	public function isolateComment (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -942,7 +944,7 @@ class Varrefvals
 	}
 	
 	//	isolate quoted string and backtick
-	public function isolateQuotedText (&$file)
+	public function isolateQuotedText (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -959,7 +961,7 @@ class Varrefvals
 	}
 	
 	//	isolate heredoc and nowdoc
-	public function isolateDocString (&$file)
+	public function isolateDocString (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -976,7 +978,7 @@ class Varrefvals
 	}
 	
 	//	isolate html part
-	public function isolateHtmlPart (&$file)
+	public function isolateHtmlPart (& $file)
 	{
 		$file = preg_replace_callback(
 		[
@@ -990,6 +992,6 @@ class Varrefvals
 	}
 }
 
-
+;
 $varrefvals = new Varrefvals;
-$varrefvals->execute($argv[1]);
+$varrefvals->execute($argv[1], isset($argv[2]) ? $argv[2] : '');

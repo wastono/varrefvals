@@ -65,6 +65,7 @@ class Varrefvals
 	private const CodeEscape2 = '(?!\d+|\b(?:else|if|stdclass|true|false|null|final|abstract|class|interface|trait|function|const|return|goto|global|echo|die|require|require_once|include|include_once|new|clone|throw|use|var|public|private|protected|static|yield|vals|refs?|A_\d+_|X_\w+_)\b)'
 	
 	private const PhpClosingTag = '?' . '>'
+	private phpBinary;
 	
 	public package
 	
@@ -412,8 +413,8 @@ class Varrefvals
 			'~\bdsession\b|\bthe\.session\b~',	//	13
 			'~\bdglobals\b|\bthe\.globals\b~',	//	14
 			'~\bdhttpresponseheader\b|\bthe\.httpResponseHeader\b~',	//	15
-			'~\bargc\b|\bthe\.argc\b~',		//	16
-			'~\bargv\b|\bthe\.argv\b~',		//	17
+			'~\bdargc\b|\bthe\.argc\b~',		//	16
+			'~\bdargv\b|\bthe\.argv\b~',		//	17
 			'~\bdline\b|\bthe\.line\b~',		//	18
 			'~\bdfile\b|\bthe\.file\b~',		//	19
 			'~\bddir\b|\bthe\.dir\b~',			//	20
@@ -617,8 +618,8 @@ class Varrefvals
 					self.CodeEscape2,
 					self.PhpClosingTag,
 				],
-				'~(^|\s*,\s*)(\$?)(\b\c*\w+\b)((?:\s*=\s*(\[(?:(?_>[^\[\]]+)|(?-1))*\])?(?_>(?:\b\c*\w+\b\s*)+(\((?:(?_>[^()]+)|(?-1))*\)))?[^,\r\n]*)?)~'),
-				//	    1      2      3          4                       5                                            6
+				'~(^|\s*,\s*)(\$?)(\b\c*\w+\b)((?:\s*=\s*(?:[^,\[({;]+|(\[(?:(?_>[^\[\]]+)|(?-1))*\])|(\((?:(?_>[^()]+)|(?-1))*\))|(\{(?:(?_>[^{}]+)|(?-1))*\}))+)?)~'),
+				//	    1      2      3          4                               5                               6                             7
 				//      ,      $    name       tail  
 			],
 			function (found) use (directIntro)
@@ -626,6 +627,7 @@ class Varrefvals
 				this.package.variable[] = found[3]
 				found[5] = ''
 				found[6] = ''
+				found[7] = ''
 				
 				if (directIntro && found[4] === '')
 				{
@@ -697,8 +699,8 @@ class Varrefvals
 					self.CodeEscape,
 					self.PhpClosingTag,
 				]
-				, '~(?_>([\(,]\s*\??\s*)((?_>\c*[\w\\\\]+)?)(\s*&?\s*)((?:\bvals\b|\brefs?\b)?)(\s*[.]*\s*)(\$?)(\c*\b\w+\b)(\s*=?\s*(\[(?:(?_>[^\[\]]+)|(?-1))*\])?(?_>(?:\b\w+\b\s*)+(\((?:(?_>[^()]+)|(?-1))*\)))?(?_>[^,\)]+)?))(?=$|[,\)])~'),
-				//             1                2              3                4                  5         6        7          8                  9                                           10
+				, '~(?_>([\(,]\s*\??\s*)((?_>\c*[\w\\\\]+)?)(\s*&?\s*)((?:\bvals\b|\brefs?\b)?)(\s*[.]*\s*)(\$?)(\c*\b\w+\b)((?:\s*=\s*(?:[^,\[({)]+|(\[(?:(?_>[^\[\]]+)|(?-1))*\])|(\((?:(?_>[^()]+)|(?-1))*\))|(\{(?:(?_>[^{}]+)|(?-1))*\}))+)?))~'),
+				//             1                2              3                4                  5         6        7          8                             9                             10                          11                  
 				//       (,    ?              type             &               ref                ...        $       name       tail
 			],
 			function (found)
@@ -713,6 +715,7 @@ class Varrefvals
 				found[6] = '$'
 				found[9] = ''
 				found[10] = ''
+				found[11] = ''
 				found[0] = ''
 				return implode(found)
 			}
@@ -989,5 +992,6 @@ class Varrefvals
 	}
 }
 
+
 var varrefvals = new Varrefvals
-varrefvals.execute(the.argv[1])
+varrefvals.execute(the.argv[1], isset(dargv[2]) ? dargv[2] : '')
