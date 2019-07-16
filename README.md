@@ -23,7 +23,7 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 11. Keyword `ref` can be used for declaring *expression* accessed by reference.
 12. Keyword `refs` can be used for declaring *expressions* accessed by reference.
 13. Keyword `vals` can be used for declaring *expressions* accessed by value.
-14. Some predefined variables and magic constants are aliased.
+14. Some *predefined variables* and *magic constants* are aliased.
 
 ## Needs
 
