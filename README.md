@@ -19,7 +19,7 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 7. Return type of `function` / `fn` can be written without `:` sign.
 8. Arrow on `fn` can be replaced by `:` sign.
 9. Variable can be declared directly using `var` keyword.
-10. Variable names can be detected from  *properties declaration*, *assignment*, and *keywords*: `global`, `foreach` `as`, `list`, `yield`, `catch`, `function`, `fn`, `use`.
+10. Variable names can be detected from  *properties declaration*, *assignment*, and *keywords*: `global`, `foreach` `as`, `list`, `catch`, `function`, `fn`, `use`.
 11. Keyword `ref` can be used for declaring *expression* accessed by reference.
 12. Keyword `refs` can be used for declaring *expressions* accessed by reference.
 13. Keyword `vals` can be used for declaring *expressions* accessed by value.
@@ -85,7 +85,7 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 
 ## Conversion
 
-I am not update this section yet. Please see *sample.var* and compile it to see the conversion result.
+I am not update this section. Please see *sample.var* or *simple.var*. Compile it to see the conversion result.
 
 | No. | Varrefvals code | PHP code |
 |:---:|---|---|

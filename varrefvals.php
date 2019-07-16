@@ -204,28 +204,25 @@ class Varrefvals
 		//	22. foreach as
 		$this->processForeachAsPart($file);
 		
-		//	23. yield
-		$this->processYieldPart($file);
-		
-		//	24. pairing notation
+		//	23. pairing notation
 		$this->replacePairingNotation($file);
 		
-		//	25. assignment
+		//	24. assignment
 		$this->processAssignmentPart($file);
 		
-		//	26. aliases
+		//	25. aliases
 		$this->replaceAliases($file);
 		
-		//	27. variable
+		//	26. variable
 		$this->variablilize($file);
 		
-		//	28. dot operator
+		//	27. dot operator
 		$this->replaceDotOperator($file);
 		
-		//	29. statement terminator
+		//	28. statement terminator
 		$this->terminateStatement($file);
 		
-		//	30. isolated part
+		//	29. isolated part
 		$this->restoreIsolatedPart($file);
 		
 		//	write .php file
@@ -466,34 +463,8 @@ class Varrefvals
 	{
 		//	pairing:	key : value
 		$file = preg_replace(
-		[
-			'~[(\[,]\s*[-]?\s*[\'"]?\$?\w+[\'"]?(?:(?:\.|::|->)\$?\w+)*\s*(?:\[[^\]]*\]\s*|\([^)]*\)\s*)*\s*\K:(?![:?])(?=\s*\S)~',
-			//                1                      2      3       4       5    6         7                       
-		], '=>', $file);
-	}
-	
-	//	process yield part
-	public function processYieldPart (&$file)
-	{
-		$file = preg_replace_callback(
-		[
-			'~\byield\b\s*\K(\$?)((?!\d+|\bfrom\b)\b\w+\b)(\s*)((?:=>|:)?)(\s*)(\$?)((?:\b\w+\b)?)(?=\s*(?:\)|;))~',
-			//                1                      2      3       4       5    6         7                       
-		],
-		function ($match)
-		{
-			$match[1] = '$';
-			$this->package->variable[] = $match[2];
-			if ($match[4]) $match[4] = '=>';
-			if ($match[7])
-			{
-				$match[6] = '$';
-				$this->package->variable[] = $match[7];
-			}
-			$match[0] = '';
-			return implode($match);
-		}
-		, $file);
+		'~(?:\byield\b|[(\[,])\s*[-]?\s*[\'"]?\$?\w+[\'"]?(?:(?:\.|::|->)\$?\w+)*\s*(?:\[[^\]]*\]\s*|\([^)]*\)\s*)*\s*\K:(?![:?])(?=\s*\S)~',
+		'=>', $file);
 	}
 	
 	//	process foreach as part
