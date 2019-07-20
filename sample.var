@@ -309,7 +309,7 @@ class Varrefvals extends Var2PhpBase
 		{
 			this.dummyTerminator = '_T_3_m_P_'
 			
-			//	return, yield from, = function () {}
+			//	return, yield from, = function () {};
 			this.anonimousFunctionAssignmentSelector = str_replace('\s*', this.commentEscape,
 			'~(?:\breturn\b|\byield\b\s\s*\bfrom\b|[^-+/*.%&|<>!=?^]=)\s*(?:\bstatic\b)?\s*\bfunction\b\s*&?\s*(\((?:(?>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))\s*:?\s*\??\s*\w*\s*(\{(?:(?>[^{}]+)|(?-1))*\})\K(?=\s*[^\s;])~')
 			
