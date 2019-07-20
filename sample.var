@@ -36,7 +36,7 @@ class Var2PhpBase
 	
 	private counter
 	public alias, part, variable, falseVariable
-	public commentSelector, aliasSelector, fullSelector
+	public commentSelector, aliasSelector, fullSelector, textOnlySelector
 	public commentEscape, commentEscape2
 	public codeEscape, codeEscape2
 	
@@ -57,6 +57,9 @@ class Var2PhpBase
 			this.commentSelector = this.getSelectorFormat(self.CommentAliasCode)
 			this.aliasSelector = this.getSelectorFormat(self.ComplexAliasCode . self.TextAliasCode)
 			this.fullSelector = this.aliasSelector . '|' . this.commentSelector
+			
+			var wordSelector = '(\w+)'
+			this.textOnlySelector = '~(?>\b' . this.isolateText(wordSelector) . '\b)~'
 			
 			this.commentEscape = '(?:(?>' . this.commentSelector . ')|\s)*'
 			this.commentEscape2 = str_replace('\s', '[ \t]', this.commentEscape)
@@ -297,9 +300,7 @@ class Varrefvals extends Var2PhpBase
 	public function restoreIsolatedPart (ref file)
 	{
 		if (this.alias) file = str_replace(this.alias, this.part, file)
-		
-		var selector = '(\w+)'
-		file = preg_replace('~(?>\b' . this.isolateText(selector) . '\b)~', '$1', file)
+		file = preg_replace(this.textOnlySelector, '$1', file)
 	}
 	
 	//	terminate statement
