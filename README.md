@@ -29,7 +29,7 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 
 1. Constant names need to be started by *upper cased* alphabet.
 2. Variable, property, and method names need to be started by *lower cased* alphabet.
-3. Methods need to be followed by `()` signs.
+3. Method needs to be followed by `()` signs.
 4. Variable name needs to be different from keywords and function names.
 5. Dot operator for string concatenation needs to be separated from *expressions* by *space* characters.
 6. Dot operator for *object* (instance, special variable (`this`, `self`, `static`, `parent`), and class name) needs to be without space next to the property or method name.
@@ -166,11 +166,6 @@ If you add an argument *path/to/binary/of/php*, the syntax of generated .php fil
 	> cd "path/to/var/file"
 	> "path/to/binary/of/php" -f "path/to/varrefvals.php" -- "file.var" "path/to/binary/of/php"
 ```
-
-## Known Issues
-
-* If there is PHP closing tag inside string, backtick, or comment, the part next to it will be detected as HTML code and not be converted.
-* End of statement line is only checked with the next code that located in the same PHP tag.
 
 ## License
 

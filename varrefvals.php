@@ -24,18 +24,72 @@
 
 //	Varrefvals version 2.0
 
-class ResultPackage
+class Var2PhpBase
 {
-	private $counter = 0;
-	public $alias = [];
-	public $part = [];
-	public $variable = [];
-	public $falseVariable = [];
+	public const Reserved = 'the|dserver|dglobals|dsession|dargv|dargc|dget|dpost|drequest|dcookie|dfiles|denv|dhttpResponseHeader|dline|dfile|ddir|dfunction|dclass|dtrait|dmethod|dnamespace|php|fn|stdclass|true|false|null|int|float|boolean|integer|binary|unset|real|double|bool|string|void|iterable|object|resource|mixed|numeric|abstract|and|array|as|break|callable|case|catch|class|clone|const|continue|declare|default|die|do|echo|else|elseif|empty|enddeclare|endfor|endforeach|endif|endswitch|endwhile|eval|exit|extends|final|finally|for|foreach|function|global|goto|if|implements|include|instanceof|insteadof|interface|isset|list|namespace|new|or|print|private|protected|public|require|return|static|switch|throw|trait|try|unset|use|var|while|xor|yield|from';
+	public const SemiReserved = 'constant|sqrt|abs|pack|glob|prev|next|current|min|max|link|dl|chr|log|key|exp|pos|count|file|dir|sin|cos|tan|pi|rand|range|mail|system|defined|header|uniqid|crypt|time|date|hash|microtime|localtime|stat|idate';
+	
+	private const TextAliasCode = 'X';
+	private const ComplexAliasCode = 'A';
+	private const CommentAliasCode = 'C';
+	private const SeparatorAliasCode = '_';
+	
+	private $counter;
+	public $alias, $part, $variable, $falseVariable;
+	public $commentSelector, $aliasSelector, $fullSelector;
+	public $commentEscape, $commentEscape2;
+	public $codeEscape, $codeEscape2;
+	
+	private $initiated = false;
+	
+	public function initiate ()
+	{
+		$this->counter = 0;
+		$this->alias = [];
+		$this->part = [];
+		$this->variable = [];
+		$this->falseVariable = [];
+		
+		if (!$this->initiated)
+		{
+			$this->initiated = true;
+			
+			$this->commentSelector = $this->getSelectorFormat(self::CommentAliasCode);
+			$this->aliasSelector = $this->getSelectorFormat(self::ComplexAliasCode . self::TextAliasCode);
+			$this->fullSelector = $this->aliasSelector . '|' . $this->commentSelector;
+			
+			$this->commentEscape = '(?:(?>' . $this->commentSelector . ')|\s)*';
+			$this->commentEscape2 = str_replace('\s', '[ \t]', $this->commentEscape);
+			$this->codeEscape = '(?!\b(?i:' . $this->fullSelector . '|vals|refs?)\b)';
+			$this->codeEscape2 = str_replace(')\b)',
+			'|\d+|else|if|stdclass|true|false|null|final|abstract|class|interface|trait|function|const|return|goto|global|echo|die|require|require_once|include|include_once|new|clone|throw|use|var|public|private|protected|static|yield|dserver|dglobals|dsession|dargv|dargc|dget|dpost|drequest|dcookie|dfiles|denv|dhttpResponseHeader|dline|dfile|ddir|dfunction|dclass|dtrait|dmethod|dnamespace)\b)',
+			$this->codeEscape);
+		}
+	}
+	
+	//	get selector format
+	private function getSelectorFormat ($code)
+	{
+		$format = [];
+		$length = strlen($code);
+		for ($i = 0; $i < $length; $i++)
+		{
+			$c = $code[$i];
+			$format[] = $this->generateCode($c, ($c == self::TextAliasCode) ? '\w+' : '\d+');
+		}
+		return implode('|', $format);
+	}
 	
 	//	generate alias
-	public function generateAlias (& $part)
+	private function generateCode ($code1, $code2)
 	{
-		$alias = 'A_' . $this->counter++ . '_';
+		return self::SeparatorAliasCode . $code1 . self::SeparatorAliasCode . $code2 . self::SeparatorAliasCode;
+	}
+	
+	//	generate alias
+	public function generateAlias (& $part, $forComment = false)
+	{
+		$alias = $this->generateCode(($forComment ? self::CommentAliasCode : self::ComplexAliasCode), $this->counter++);
 		array_unshift($this->alias, $alias);
 		array_unshift($this->part, $part);
 		return $alias;
@@ -44,7 +98,7 @@ class ResultPackage
 	//	isolate text
 	public function isolateText (& $text)
 	{
-		return ($text === '') ? '' : ('X_' . $text . '_');
+		return ($text === '') ? '' : $this->generateCode(self::TextAliasCode, $text);
 	}
 	
 	//	isolate part
@@ -55,19 +109,9 @@ class ResultPackage
 	}
 }
 
-class Varrefvals
+class Varrefvals extends Var2PhpBase
 {
-	private const Reserved = 'the|php|fn|stdclass|true|false|null|int|float|boolean|integer|binary|unset|real|double|bool|string|void|iterable|object|resource|mixed|numeric|abstract|and|array|as|break|callable|case|catch|class|clone|const|continue|declare|default|die|do|echo|else|elseif|empty|enddeclare|endfor|endforeach|endif|endswitch|endwhile|eval|exit|extends|final|finally|for|foreach|function|global|goto|if|implements|include|instanceof|insteadof|interface|isset|list|namespace|new|or|print|private|protected|public|require|return|static|switch|throw|trait|try|unset|use|var|while|xor|yield|from';
-	private const SemiReserved = 'constant|sqrt|abs|pack|glob|prev|next|current|min|max|link|dl|chr|log|key|exp|pos|count|file|dir|sin|cos|tan|pi|rand|range|mail|system|defined|header|uniqid|crypt|time|date|hash|microtime|localtime|stat|idate';
-	
-	private const CommentEscape = '(?:(?:#|//|/\*)A_\d+_\*?/?|\s)*';
-	private const CodeEscape = '(?!\bA_\d+_\b|\bX_\w+_\b|\bvals\b|\brefs?\b)';
-	private const CodeEscape2 = '(?!\d+|\b(?:else|if|stdclass|true|false|null|final|abstract|class|interface|trait|function|const|return|goto|global|echo|die|require|require_once|include|include_once|new|clone|throw|use|var|public|private|protected|static|yield|vals|refs?|A_\d+_|X_\w+_)\b)';
-	
-	private const PhpClosingTag = '?' . '>';
 	private $phpBinary;
-	
-	public $package;
 	
 	public function __construct ()
 	{
@@ -76,10 +120,10 @@ class Varrefvals
 	}
 	
 	private function message ($s) { echo "\n\t", $s; }
-	private function message2 ($s)
+	private function message2 ($s, $nl = "\n")
 	{
 		$now = DateTime::createFromFormat('U.u', microtime(true));
-		echo "\n\t", $now->format('Y-m-d H:i:s.u'), " : ", $s;
+		echo $nl, "\t", $now->format('Y-m-d H:i:s.u'), "   ", $s;
 	}
 	
 	public function execute ($file = '', $phpBinary = '')
@@ -100,11 +144,7 @@ class Varrefvals
 			if (preg_match('/.*?\.php$/i', $file))
 			{
 				$this->message('Executing ' . $file . "...\n\n");
-				if ($phpBinary)
-				{
-					$this->processFile($file);
-					$this->processFile($file, false);
-				}
+				if ($phpBinary) $this->processFile($file, false);
 				else include $file;
 				return;
 			}
@@ -138,7 +178,7 @@ class Varrefvals
 		}
 		catch (Exception $e)
 		{
-			$this->message2($e->getMessage());
+			$this->message($e->getMessage(), '');
 		}
 	}
 	
@@ -155,51 +195,43 @@ class Varrefvals
 			return;
 		}
 		
-		//	result package
-		$this->package = new ResultPackage;
+		//	package helper
+		$this->initiate();
 		
 		//	add special variable
-		$this->package->variable[] = 'this';
+		$this->variable[] = 'this';
 		
 		//	read file content
 		$file = file_get_contents($path);
 		
 		//	1. html
-		$this->isolateHtmlPart($file);
-		
 		//	2. heredoc
 		//	3. nowdoc
-		$this->isolateDocString($file);
-		
 		//	4. single quoted string
 		//	5. double quoted string
 		//	6. backtick operator
-		$this->isolateQuotedText($file);
-		
 		//	7. comment
-		$this->isolateComment($file);
-		
 		//	8. interface
 		//	9. trait
-		$this->isolateInterfaceAndTraitName($file);
+		//	10. class
+		$this->isolateParts($file);
 		
-		//	10. catch
+		//	11. catch
 		$this->processCatchPart($file);
 		
-		//	11. function
-		//	12. fn
+		//	12. function
+		//	13. fn
 		$this->processFunctionAndFnPart($file);
 		
-		//	13. statement terminator
+		//	14. statement terminator
 		$this->terminateStatement($file);
 		
-		//	14. namespace
+		//	15. namespace
 		$this->isolateNamespace($file);
 		
-		//	15. class (extends, implements)
 		//	16. use for namespace
 		//	17. use for trait
-		$this->processClassAndUsePart($file);
+		$this->processUsePart($file);
 		
 		//	18. digit space (binary, octal, decimal, float, hexadecimal)
 		$this->removeDigitSpace($file);
@@ -248,99 +280,132 @@ class Varrefvals
 	{
 		if ($this->phpBinary)
 		{
-			$output = [];
-			exec('"' . $this->phpBinary . '"' . ($checkSyntaxOnly ? ' -l' : '') . ' -f "' . $path . '"', $output);
-			foreach ($output as $value)
+			$command = '"' . $this->phpBinary . '"' . ($checkSyntaxOnly ? ' -l' : '') . ' -f "' . $path . '"';
+			if ($checkSyntaxOnly)
 			{
-				$this->message2($value);
+				$this->message2("start checking syntax\n");
+				$output = [];
+				exec($command, $output);
+				$this->message2("finish", '');
+				$this->message(array_slice($output, -1)[0] . "\n");
 			}
-			$this->message('');
+			else system($command);
 		}
 	}
 	
 	//	restore isolated part
 	public function restoreIsolatedPart (& $file)
 	{
+		if ($this->alias) $file = str_replace($this->alias, $this->part, $file);
+		
 		$selector = '(\w+)';
-		$file = preg_replace('~(' . self::PhpClosingTag . '\b' . $this->package->isolateText($selector) . '\b)~', '$1', $file);
-		if ($this->package->alias) $file = str_replace($this->package->alias, $this->package->part, $file);
+		$file = preg_replace('~(?>\b' . $this->isolateText($selector) . '\b)~', '$1', $file);
 	}
 	
 	//	terminate statement
 	public function terminateStatement (& $file)
 	{
-		$file = preg_replace_callback(
-		[
-			//	break, continue, return, yield, exit;
-			str_replace('\s*', self::CommentEscape,
-			'~\b(?:break|continue|return|yield|exit)\b\K(?=[ \t]*(;?)(?|[ \t]*(?:(?://|/\*|#)A_\d+_\*?/?)?[ \t]*(;?)[ \t]*[\r\n]|\s*(;?)\s*\}))~'),
-			//											  		  1										         2					 2
+		if (!isset($this->dummyTerminator))
+		{
+			$this->dummyTerminator = '_T_3_m_P_';
 			
 			//	return, yield from, = function () {};
-			str_replace(
-			[
-				'\s*',
-				'?_>',
-			],
-			[
-				self::CommentEscape,
-				self::PhpClosingTag,
-			],
-			'~(?:\breturn\b|\byield\b\s\s*\bfrom\b|[^-+/*.%&|<>!=?^]=)\s*(?:\bstatic\b)?\s*\bfunction\b\s*(?:\bref\b|&)?\s*(\((?:(?_>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))\s*:?\s*\w*\s*(\{(?:(?_>[^{}]+)|(?-1))*\})\K(?=\s*(;?))~'),
-			//																																	1													2					    3  
+			$this->anonimousFunctionAssignmentSelector = str_replace('\s*', $this->commentEscape,
+			'~(?:\breturn\b|\byield\b\s\s*\bfrom\b|[^-+/*.%&|<>!=?^]=)\s*(?:\bstatic\b)?\s*\bfunction\b\s*&?\s*(\((?:(?>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))\s*:?\s*\??\s*\w*\s*(\{(?:(?>[^{}]+)|(?-1))*\})\K(?=\s*[^\s;])~');
 			
-			//	expression ; \r\n expression			include bug: expression ; }
-			str_replace(
+			$this->simpleMustHaveTerminatorSelector =
 			[
-				'\s*',
-				'?_>',
-			],
-			[
-				self::CommentEscape,
-				self::PhpClosingTag,
-			],
-			'~(?|(?<!//|#)(?!\b(?i:' . str_replace(['|null|', '|true|', '|false|', '|stdclass|'], '|', self::Reserved) . '|A_\d+_)\b)\$?\b\w+\b()|(?<=->|::)\bclass\b()|[\])\'"`]()|(?:->|::)\s*(\{(?:(?_>[^{}]+)|(?-1))*\})|\+\+()|--()|=\s*\{\}())\K(?=(?|\s*(;?)()()\s*(?:\?_>|\}|$)|[ \t]*(;?)[ \t]*(?:(?://|/\*|#)A_\d+_\*?/?)?[ \t]*(;?)()[ \t]*[\r\n]\s*(?:[\'"`$]|\+\+|--|(?!\b(?:as|instanceof|insteadof|and|x?or)\b)\$?\b\w+\b|(\[(?:(?_>[^\[\]]+)|(?-1))*\])\s*=|(\((?:(?_>[^()]+)|(?-1))*\))\s*(?:->|::|\())))~'),
-			//																																  1			 			1			1								1				1    1	        1			   2  3 4				  |		  2											  3  4
+				//	break, continue, return, yield, exit ;
+				str_replace(['\s*', '\t*'], [$this->commentEscape, $this->commentEscape2],
+				'~\b(?:break|continue|return|yield|exit)\b\K(?=\t*[\r\n]|\s*(?:\}|\?>|$))~'),
+				
+				//	} while () , do while (), endswitch, endfor, endforeach, endwhile, endif ;
+				str_replace('\s*', $this->commentEscape,
+				'~(?:\b(?i:endswitch|endfor|endforeach|endwhile|endif)\b|(?:\}|\bdo\b\s*[\s\S]+?)\s*\bwhile\b\s*(\((?:(?>[^()]+)|(?-1))*\)))\K(?=\s*[^\s;])~'),
+			];
 			
-			//	remove bug:	->{expression ; }	::{expression ; }
-			str_replace('\s*', self::CommentEscape,
-			'~(?:->|::|\.)\s*\{[^{;}]+;\s*\}~'),
-		],
+			//	expression ; \r\n expression
+			$this->betweenExpressionTerminatorSelector = str_replace(['\s*', '\t*', '\reserved'],
+			[$this->commentEscape, $this->commentEscape2, str_replace(['|null|', '|true|', '|false|', '|stdclass|'], '|', self::Reserved)],
+			'~(?'
+			. '|(?:->|::|\.)(?|\s*(\{(?:(?>[^{}]+)|(?-1))*\})|\bclass\b())'
+			. '|\$?\b(?!(?i:\reserved)\b|' . $this->commentSelector . '\b)\w+\b()'
+			. '|([\]\'"`)])'
+			. '|\+\+()|--()'
+			. '|=\s*\{\}()'
+			. ')\K'
+			. '(?='
+			. '(?'
+			. '|\s*(\?>|\}|$)'
+			. '|\t*[\r\n]\s*()'
+			. '(?:'
+			. '(\((?:(?>[^()]+)|(?-1))*\))\s*(?:->|::|[\[.(])'
+			. '|(\[(?:(?>[^\[\]]+)|(?-1))*\])\s*[=(]'
+			. '|\$?\b(?!(?i:as|instanceof|insteadof|and|x?or)\b|' . $this->commentSelector . '\b)\w+\b'
+			. '|[\'"`$]'
+			. '|\+\+|--'
+			. ')'
+			. '))~'
+			);
+			
+			//	while|if|foreach|for () dummy
+			$this->unneededDummyOnControlStructureSelector = str_replace('\s*', $this->commentEscape,
+			'~\b(?i:while|if|foreach|for)\b\s*(\((?:(?>[^()]+)|(?-1))*\))\K' . $this->dummyTerminator . '~');
+			
+			//	->{	dummy }
+			$this->unneededDummyOnVariableOfVariableSelector = str_replace('\s*', $this->commentEscape,
+			'~(?:->|::|\.)\s*\{[^{;}]+\K' . $this->dummyTerminator . '(?=\s*\})~');
+		}
+		
+		//	put ; on format:		return, yield from, = function () {};
+		$file = preg_replace($this->anonimousFunctionAssignmentSelector, ';', $file);
+		
+		//	put ; on simple format
+		$file = preg_replace($this->simpleMustHaveTerminatorSelector, ';', $file);
+		
+		//	put ; on format			//	expression ; \r\n expression
+		$file = preg_replace_callback($this->betweenExpressionTerminatorSelector,
 		function ($match)
 		{
 			//	expression ; \r\n expression
-			if (isset($match[4])) return ($match[2] || $match[3]) ? '' : ';';
-			
-			//	return, yield from, = function () {};
-			if (isset($match[3])) return $match[3] ? '' : ';';
-			
-			//	remove bug:	->{expression ; }	::{expression ; }
-			if (!isset($match[1])) return str_replace(';', '', $match[0]);
-			
-			//	break, continue, return, yield, exit;
-			return ($match[1] || $match[2]) ? '' : ';';
+			//	dummy for:			expression ; }			) ; \r\n expression
+			return ($match[1] == ')' || $match[2] == '}') ? $this->dummyTerminator : ';';
 		}
 		, $file);
+		
+		//	remove dummy on unneeded ;		while|if|foreach|for () dummy
+		$file = preg_replace($this->unneededDummyOnControlStructureSelector, '', $file);
+		
+		//	remove dummy on unneeded ;		->{	dummy }
+		$file = preg_replace($this->unneededDummyOnVariableOfVariableSelector, '', $file);
+		
+		//	replace dummy on needed ;		) dummy		dummy }
+		$file = str_replace($this->dummyTerminator, ';', $file);
 	}
 	
 	//	replace dot operator
 	public function replaceDotOperator (& $file)
 	{
-		$file = preg_replace_callback(
-		[
-			//	.Constant
-			str_replace('\s*', self::CommentEscape,
-			'~[\w)}]\s*\K\.(?=\b[A-Z])~'),
-			
-			//	instance.
-			str_replace('\s*', self::CommentEscape,
-			'~(?:\$\b\w+\b|[)}])\K(?:\s*\.(?:\$?\b[_a-zA-Z]\w*\b|\{))+~'),
-			
-			//	notInstance.
-			str_replace('\s*', self::CommentEscape,
-			'~(?<!\$)\b[_a-zA-Z]\w*\b\s*\.(?|()(\{)|(\$?\b[_a-zA-Z]\w*\b)\s*(\(?))~'),
-			//								 1  2  |	1					  2
-		],
+		if (!isset($this->dotOperatorSelector))
+		{
+			$this->dotOperatorSelector =
+			[
+				//	.Constant
+				str_replace('\s*', $this->commentEscape,
+				'~[\w)}]\s*\K\.(?=\b[A-Z])~'),
+				
+				//	instance.
+				str_replace('\s*', $this->commentEscape,
+				'~(?:\$\b\w+\b|[)}])\K(?:\s*\.(?:\$?\b[_a-zA-Z]\w*\b|\{))+~'),
+				
+				//	notInstance.
+				str_replace('\s*', $this->commentEscape,
+				'~(?<!\$)\b[_a-zA-Z]\w*\b\s*\.(?|()(\{)|(\$?\b[_a-zA-Z]\w*\b)\s*(\(?))~'),
+				//								 1  2  |	1					  2		
+			];
+		}
+		
+		$file = preg_replace_callback($this->dotOperatorSelector,
 		function ($match)
 		{
 			//	.Constant
@@ -364,29 +429,25 @@ class Varrefvals
 	//	variablilize
 	public function variablilize (& $file)
 	{
-		$this->package->variable = array_filter(preg_replace_callback('~^(?i:' . self::Reserved . ')$~',
+		if (!isset($this->reservedSelector))
+		{
+			$this->reservedSelector = '~^(?i:' . self::Reserved . ')$~';
+			$this->partOfvariableSelector = str_replace('\s*', $this->commentEscape,
+			'~(?:[\w})]\s*\.|(..))\K(?<!\$|::|->|\\\)(?!\b(?i:' . self::SemiReserved . ')\b(?:\\\|\s*\())(?=\b(?:');
+			//				  1																						
+		}
+		
+		$this->variable = array_filter(preg_replace_callback($this->reservedSelector,
 		function ($match)
 		{
-			$this->package->falseVariable[] = $match[0];
+			$this->falseVariable[] = $match[0];
 			return '';
 		}
-		, array_unique($this->package->variable)));
+		, array_unique($this->variable)));
 		
-		if ($this->package->falseVariable) $this->message2("false variable detected:\n\t" . implode(', ', $this->package->falseVariable) . "\n");
+		if ($this->falseVariable) $this->message2("false variable detected:\n\t" . implode(', ', $this->falseVariable) . "\n");
 		
-		$file = preg_replace_callback(
-		[
-			str_replace(
-			[
-				'\s*',
-				'\c*',
-			],
-			[
-				self::CommentEscape,
-				self::CodeEscape,
-			],
-			'~(?:[\w})]\s*\.|(..))\K(?<!\$|::|->|\\\)(?!\b(?i:' . self::SemiReserved . ')\b(?:\\\|\s*\())(?=\b(?:' . implode('|', $this->package->variable) . ')\b(?!\\\))~s'),
-		],
+		$file = preg_replace_callback($this->partOfvariableSelector . implode('|', $this->variable) . ')\b(?!\\\))~s',
 		function ($match)
 		{
 			return isset($match[1]) ? '$' : '';
@@ -456,27 +517,18 @@ class Varrefvals
 	//	process assignment part
 	public function processAssignmentPart (& $file)
 	{
-		$file = preg_replace_callback(
-		[
-			str_replace(
-			[
-				'\s*',
-				'\c*',
-				'?_>',
-			],
-			[
-				self::CommentEscape,
-				self::CodeEscape,
-				self::PhpClosingTag,
-			],
-			'~((?:\b(?:A_\d+_|X_\w+_)\b[ \t]+|\bconst\b|\bdeclare\b\s*\(\s*)?)(\s*)((?<!->|\.|::)\$?)(\c*\b\w+\b)([ \t]*(\[(?:(?_>[^\[\]]+)|(?-1))*\])?)(\s*(?:[-%|+/&.^]|\*\*?|>>|<<|\?\?)?[=])(?![=>])~'),
+		if (!isset($this->assignmentPartSelector))
+		{
+			$this->assignmentPartSelector = str_replace(['\s*', '\c*'], [$this->commentEscape, $this->codeEscape2],
+			'~((?:\b(?:' . $this->aliasSelector . ')\b[ \t]+|\bconst\b|\bdeclare\b\s*\(\s*)?)(\s*)((?<!->|\.|::)\$?)(\c*\b\w+\b)([ \t]*(\[(?:(?>[^\[\]]+)|(?-1))*\])?)(\s*(?:[-%|+/&.^]|\*\*?|>>|<<|\?\?)?[=])(?![=>])~');
 			//                  1                                               2          3               4       5                6                              7              
-		],
+		}
+		$file = preg_replace_callback($this->assignmentPartSelector,
 		function ($match)
 		{
 			if ($match[1]) return $match[0];
 			$match[3] = '$';
-			$this->package->variable[] = $match[4];
+			$this->variable[] = $match[4];
 			$match[6] = '';
 			$match[0] = '';
 			return implode($match);
@@ -487,32 +539,39 @@ class Varrefvals
 	//	replace pairing notation
 	public function replacePairingNotation (& $file)
 	{
+		if (!isset($this->pairingNotationSelector))
+		{
+			//	key : value
+			$this->pairingNotationSelector = str_replace('\s*', $this->commentEscape,
+			'~(?:\byield\b|[(\[,])\s*[-]?\s*[\'"]?\$?\w+[\'"]?(?:(?:\.|::|->)\$?\w+)*\s*(?:\[[^\]]*\]\s*|\([^)]*\)\s*)*\s*\K:(?![:?])(?=\s*\S)~');
+		}
+		
 		//	pairing:	key : value
-		$file = preg_replace(
-		'~(?:\byield\b|[(\[,])\s*[-]?\s*[\'"]?\$?\w+[\'"]?(?:(?:\.|::|->)\$?\w+)*\s*(?:\[[^\]]*\]\s*|\([^)]*\)\s*)*\s*\K:(?![:?])(?=\s*\S)~',
-		'=>', $file);
+		$file = preg_replace($this->pairingNotationSelector, '=>', $file);
 	}
 	
 	//	process foreach as part
 	public function processForeachAsPart (& $file)
 	{
-		$file = preg_replace_callback(
-		[
-			str_replace('\s*', self::CommentEscape,
-			'~\bas\b\s*\K((?:\bref\b|&)?)(\s*)(\$?)(\b\w+\b)(\s*)((?:=>|:)?)(\s*)((?:\bref\b|&)?)(\s*)(\$?)((?:\b\w+\b)?)(\s*\))~'),
-			//                    1        2    3      4      5       6       7         8          9    10        11        12                             |                       1              
-		],
+		if (!isset($this->foreachAsSelector))
+		{
+			$this->foreachAsSelector = str_replace('\s*', $this->commentEscape,
+			'~\bas\b\s*\K((?:\bref\b|&)?)(\s*)(\$?)(\b\w+\b)(\s*)((?:=>|:)?)(\s*)((?:\bref\b|&)?)(\s*)(\$?)((?:\b\w+\b)?)(\s*\))~');
+			//					1		   2	3		4	  5		6		  7			8		   9	10		11		   12		
+		}
+		
+		$file = preg_replace_callback($this->foreachAsSelector,
 		function ($match)
 		{
 			if ($match[1]) $match[1] = '&';
 			if ($match[8]) $match[8] = '&';
 			
 			$match[3] = '$';
-			$this->package->variable[] = $match[4];
+			$this->variable[] = $match[4];
 			if ($match[6]) $match[6] = '=>';
 			if ($match[11])
 			{
-				$this->package->variable[] = $match[11];
+				$this->variable[] = $match[11];
 				$match[10] = '$';
 			}
 			$match[0] = '';
@@ -524,35 +583,28 @@ class Varrefvals
 	//	process list part
 	public function processListPart (& $file)
 	{
-		$file = preg_replace_callback(
-		[
-			str_replace(
-			[
-				'\s*',
-				'?_>',
-			],
-			[
-				self::CommentEscape,
-				self::PhpClosingTag,
-			],
-			'~\blist\b\s*\K(\((?:(?_>[^()]+)|(?-1))*\))|\bas\b\s*\K(\[(?:(?_>[^\[\]]+)|(?-1))*\])|(\[(?:(?_>[^\[\]]+)|(?-1))*\])(?=\s*=)~'),
-			//                         1               |               1                         |                       1              
-		],
+		if (!isset($this->listSelector))
+		{
+			$this->listSelector = str_replace('\s*', $this->commentEscape,
+			'~\blist\b\s*\K(\((?:(?>[^()]+)|(?-1))*\))|\bas\b\s*\K(\[(?:(?>[^\[\]]+)|(?-1))*\])|(\[(?:(?>[^\[\]]+)|(?-1))*\])(?=\s*=)~');
+			//							1			  |							1			   |				1						
+			
+			$this->variableOnListSelector = str_replace('\s*', $this->commentEscape,
+			'~([\[(,>]\s*&?\s*)((?:\bref\b\s*)?)(\$?)((?!\blist\b|\d+)\b\w+\b)(?=\s*[\[\],)])~');
+			//			1				2		  3					4							
+		}
+		
+		$file = preg_replace_callback($this->listSelector,
 		function ($match)
 		{
 			$match[0] = str_replace(':', '=>', $match[0]);
-			return preg_replace_callback(
-			[
-				str_replace('\s*', self::CommentEscape,
-				'~([\[(,>]\s*&?\s*)((?:\bref\b\s*)?)(\$?)((?!\blist\b|\d+)\b\w+\b)(?=\s*[\[\],)])~'),
-				//        1                2           3                  4                       
-			],
+			return preg_replace_callback($this->variableOnListSelector,
 			function ($found)
 			{
 				if ($found[2]) $found[2] = '&';
 				
 				$found[3] = '$';
-				$this->package->variable[] = $found[4];
+				$this->variable[] = $found[4];
 				
 				$found[0] = '';
 				return implode($found);
@@ -565,33 +617,32 @@ class Varrefvals
 	//	process variable intro
 	public function processVariableIntro (& $file)
 	{
-		$file = preg_replace_callback(
-		[
-			str_replace(
-			[
-				'\s*',
-				'\c*',
-			],
-			[
-				self::CommentEscape,
-				self::CodeEscape2,
-			],
+		if (!isset($this->variableIntroSelector))
+		{
+			$this->variableIntroSelector = str_replace(['\s*', '\c*'], [$this->commentEscape, $this->codeEscape2],
 			//	global
 			'~(?|()(\bglobal\b[ \t]+)()()()(\$?\b\w+\b(?:\s*,\s*\b\w+\b)*)((?:\s*;)?)'
-			//   1       2           3 4 5   6                                   7   
-			//        keyword                $name         , tail                ;   
+			//	 1		2			 3 4 5		6								 7	
+			//			keyword					$name		, tail				 ;	
 			
 			//	properties, variable declaration
 			. '|()(\b(?:var|public|private|protected|static)\b[ \t]+(?:\b(?:public|private|protected|static)\b[ \t]+)?)(\??[ \t]*)((?:[\\\\]?\c*\b[\w\\\\]+\b)?)([ \t]*)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;]*)*)((?:\s*;)?)'
-			//  1        2                                                                                                3                         4              5      6                                        7   
-			//        keyword                                                                                             ?                       type                    $name          , tail                    ;
+			//	1		2																									3						4				5		6									   7	
+			//			keyword																								?						type					$name			, tail				   ;	
 			
 			//	bare properties
-			. '|((?:(?:\S\s*)?[\r\n]+|[\r\n{};])[ \t]*)()(\??[ \t]*)([\\\\]?\c*\b[\w\\\\]+\b)([ \t]+)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;]*)*)((?:\s*;)?))~'
-			//          1                              2    3                      4             5     6                                        7     
-			//        check                                 ?                    type                  $name   , tail                           ;      
-			),	
-		],
+			. '|((?:(?:\S\s*)?[\r\n]+|[\r\n{};])[ \t]*)()(\??[ \t]*)([\\\\]?\c*\b[\w\\\\]+\b)([ \t]+)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;]*)*)((?:\s*;)?))~');
+			//			1								2	3						4			5			6									7		
+			//			check								?						type					$name			, tail				;		
+			
+			$this->lastCommandEscapeSelector = '~('. $this->commentEscape . ')$~';
+			$this->variableIntroItemSelector = str_replace(['\s*', '\c*'], [$this->commentEscape, $this->codeEscape2],
+			'~(^|\s*,\s*)(\$?)(\b\c*\w+\b)((?:\s*=\s*(?:[^,\[({;]+|(\[(?:(?>[^\[\]]+)|(?-1))*\])|(\((?:(?>[^()]+)|(?-1))*\))|(\{(?:(?>[^{}]+)|(?-1))*\}))+)?)~');
+			//		1		2		3			4							5								6							7						
+			//		,		$		name		tail																											
+		}
+		
+		$file = preg_replace_callback($this->variableIntroSelector,
 		function ($match)
 		{
 			if (preg_match('~^[,\[(]~', $match[1])) return $match[0];
@@ -599,32 +650,16 @@ class Varrefvals
 			$directIntro = substr($match[2], 0, 3) == 'var' && $match[4] === '';
 			if ($directIntro) $match[2] = ltrim(substr($match[2], 3));
 			
-			$match[4] = $this->package->isolatePart($match[4]);
+			$match[4] = $this->isolatePart($match[4]);
 			
 			//	put ; sign
-			$match[6] = preg_replace('~('. self::CommentEscape . ')_REPLACED$~', ';$1', $match[6] . '_REPLACED');
+			$match[6] = preg_replace($this->lastCommandEscapeSelector, ';$1', $match[6]);
 			
 			//	$name + tail
-			$match[6] = preg_replace_callback(
-			[
-				str_replace(
-				[
-					'\s*',
-					'\c*',
-					'?_>',
-				],
-				[
-					self::CommentEscape,
-					self::CodeEscape2,
-					self::PhpClosingTag,
-				],
-				'~(^|\s*,\s*)(\$?)(\b\c*\w+\b)((?:\s*=\s*(?:[^,\[({;]+|(\[(?:(?_>[^\[\]]+)|(?-1))*\])|(\((?:(?_>[^()]+)|(?-1))*\))|(\{(?:(?_>[^{}]+)|(?-1))*\}))+)?)~'),
-				//	    1      2      3          4                               5                               6                             7
-				//      ,      $    name       tail  
-			],
+			$match[6] = preg_replace_callback($this->variableIntroItemSelector,
 			function ($found) use ($directIntro)
 			{
-				$this->package->variable[] = $found[3];
+				$this->variable[] = $found[3];
 				$found[5] = '';
 				$found[6] = '';
 				$found[7] = '';
@@ -652,10 +687,12 @@ class Varrefvals
 	//	remove digit space
 	public function removeDigitSpace (& $file)
 	{
-		$file = preg_replace_callback(
-		[
-			'~\d\K (?=\d)|0x[a-f\d][a-f \d]+[a-f\d]~i',
-		],
+		if (!isset($this->digitSpaceSelector))
+		{
+			$this->digitSpaceSelector = '~\d\K (?=\d)|0x[a-f\d]\K[a-f \d]+(?=[a-f\d])~i';
+		}
+		
+		$file = preg_replace_callback($this->digitSpaceSelector,
 		function ($match)
 		{
 			return str_replace(' ', '', $match[0]);
@@ -666,52 +703,38 @@ class Varrefvals
 	//	process function and fn part
 	public function processFunctionAndFnPart (& $file)
 	{
-		$file = preg_replace_callback(
-		[
-			str_replace(
-			[
-				'\s*',
-				'\c*',
-				'?_>',
-			],
-			[
-				self::CommentEscape,
-				self::CodeEscape2,
-				self::PhpClosingTag,
-			]
-			, '~(?_>(\bf(?:unctio)?n\b)(\s*)((?:\bref\b|&)?)(\s*)((?:\c*\b(?_>\w+)\b)?)(\s*)(\((?:(?_>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))([ \t]*)(:?)([ \t]*)(\??)([ \t]*)((?:\c*(?_>[\w\\\\]+))?)(\s*)([{;:=]?))~'),
-			//			   1             2          3         4               5          6                7                                 8      9      10    11    12             13              14     15
-			//			   fn                       &                        name                      argument                                    :            ?                   type                   tail
-		],
+		if (!isset($this->functionAndFnSelector))
+		{
+			$this->functionAndFnSelector = str_replace(['\s*', '\c*'], [$this->commentEscape, $this->codeEscape2],
+			'~(?>(\bf(?:unctio)?n\b)(\s*)((?:\bref\b|&)?)(\s*)((?:\c*\b(?>\w+)\b)?)(\s*)(\((?:(?>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))([ \t]*)(:?)([ \t]*)(\??)([ \t]*)((?:\c*(?>[\w\\\\]+))?)(\s*)([{;:=]?))~');
+			//			1			  2			3			4			5			6							7						8	  9		10		11	12				13			  14	15			
+			//			fn						&						name								argument						  :				?					type				tail		
+			
+			$this->argumentSelector = str_replace(['\s*', '\c*', '\q*'], [$this->commentEscape, $this->codeEscape, $this->codeEscape2],
+			'~(?>([\(,]\s*\??\s*)((?>\c*[\w\\\\]+)?)(\s*&?\s*)((?:\bvals\b|\brefs?\b)?)(\s*[.]*\s*)(\$?)(\q*\b\w+\b)((?:\s*=\s*(?:[^,\[({)]+|(\[(?:(?>[^\[\]]+)|(?-1))*\])|(\((?:(?>[^()]+)|(?-1))*\))|(\{(?:(?>[^{}]+)|(?-1))*\}))+)?))~');
+			//			1					2			3				4					5		 6			7			8							9							10								11						
+			//			(, ?				type		&				ref					...		 $			name		tail																											
+		}
+		
+		$file = preg_replace_callback($this->functionAndFnSelector,
 		function ($match)
 		{
-			//	arguments		
-			$match[7] = preg_replace_callback(
-			[
-				str_replace(
-				[
-					'\s*',
-					'\c*',
-					'?_>',
-				],
-				[
-					self::CommentEscape,
-					self::CodeEscape,
-					self::PhpClosingTag,
-				]
-				, '~(?_>([\(,]\s*\??\s*)((?_>\c*[\w\\\\]+)?)(\s*&?\s*)((?:\bvals\b|\brefs?\b)?)(\s*[.]*\s*)(\$?)(\c*\b\w+\b)((?:\s*=\s*(?:[^,\[({)]+|(\[(?:(?_>[^\[\]]+)|(?-1))*\])|(\((?:(?_>[^()]+)|(?-1))*\))|(\{(?:(?_>[^{}]+)|(?-1))*\}))+)?))~'),
-				//             1                2              3                4                  5         6        7          8                             9                             10                          11                  
-				//       (,    ?              type             &               ref                ...        $       name       tail
-			],
+			//	arguments
+			$match[7] = preg_replace_callback($this->argumentSelector,
 			function ($found)
 			{
 				//	variable type
-				$found[2] = $this->package->isolatePart($found[2]);
+				$found[2] = $this->isolatePart($found[2]);
 				
 				//	reference
-				if ($found[4]) $found[4] = str_replace(['vals', 'refs', 'ref'], ['...', '&...', '&'], $found[4]);
+				if ($found[4])
+				{
+					$found[4] = preg_replace(
+					['~\bvals\b[ \t]*~', '~\brefs\b[ \t]*~', '~\bref\b[ \t]*~'],
+					['...', '&...', '&'], $found[4]);
+				}
 				
-				$this->package->variable[] = $found[7];
+				$this->variable[] = $found[7];
 				$found[6] = '$';
 				$found[9] = '';
 				$found[10] = '';
@@ -722,7 +745,7 @@ class Varrefvals
 			, $match[7]);
 			
 			//	function / fn name
-			$match[5] = $this->package->isolateText($match[5]);
+			$match[5] = $this->isolateText($match[5]);
 			
 			//	return reference
 			if ($match[3]) $match[3] = '&';
@@ -747,7 +770,7 @@ class Varrefvals
 				}
 				else if ($match[9]) $match[9] = '=>';
 			}
-			else	//	bagian function
+			else	//	function
 			{
 				if ($match[15] == '')
 				{
@@ -765,8 +788,7 @@ class Varrefvals
 					$isolateReturnType = true;
 				}
 			}
-			
-			if ($isolateReturnType) $match[13] = $this->package->isolatePart($match[13]);
+			if ($isolateReturnType) $match[13] = $this->isolatePart($match[13]);
 			
 			$match[0] = '';
 			return implode($match);
@@ -774,79 +796,57 @@ class Varrefvals
 		, $file);
 	}
 	
-	//	process class and use part
-	public function processClassAndUsePart (& $file)
+	//	process use part
+	public function processUsePart (& $file)
 	{
-		$file = preg_replace_callback(
-		[
-			//	class (extends, implements) n use for namespace
-			str_replace(
-			[
-				'\s*',
-				'?_>',
-			],
-			[
-				self::CommentEscape,
-				self::PhpClosingTag,
-			],
-			'~(?|\s\K(\bclass\b)(\s\s*)([^{]+)(\{(?:(?_>[^{}]+)|(?-1))*\})|\s\K(\buse\b)(\s*)((?:\s*,?\s*(?!\()[\w\\\\]+)+)(\s*)((?:\{[^}]+\})?)(\s*)(;?))~'),
-			//            1        2      3               4               |        1      2               3                  4       5            6   7    
-			//			class            name           body              |       use                    name                       item              ;    
-		],
+		if (!isset($this->usePartSelector))
+		{
+			$this->usePartSelector = str_replace('\s*', $this->commentEscape,
+			'~(?|\s\K(\bclass\b)(\s\s*)([^{]+)(\{(?:(?>[^{}]+)|(?-1))*\})|\s\K(\buse\b)(\s*)((?:\s*,?\s*(?!\()[\w\\\\]+)+)(\s*)((?:\{[^}]+\})?)(\s*)(;?))~');
+			//				1		2	3				4				 |		1		 2					3				4		5			6	 7		
+			//			class			name			body			 |		use							name					item			 ;		
+			
+			$this->useInClassSelector = str_replace('\s*', $this->commentEscape,
+			'~(?>\s\buse\b\s*)\K((?>\s*,?\s*(?!\()\b\w+\b)+)(\s*)(;?)((?>\{[^}]+\})?)~');
+			//									1			  2   3			4			
+			//								  name				  ;			item		
+			
+			$this->useTraitItemSelector = str_replace('\s*', $this->commentEscape,
+			'~(?>\{?\s*)\K((?>\b[\w:.]+\b))(\s\s*)((?>\b\w+\b\s*,?\s*)+)(;?)~');
+			//					1			2				3			 4		
+			//				  name						  name			 ;		
+		}
+		
+		//	use inside class and use for namespace
+		$file = preg_replace_callback($this->usePartSelector,
 		function ($match)
 		{
 			if ($match[0][0] == 'c')	//	class
 			{
-				$match[4] = preg_replace_callback(
-				[
-					//	use in class for trait related
-					str_replace(
-					[
-						'\s*', 
-						'?_>',
-					],
-					[
-						self::CommentEscape,
-						self::PhpClosingTag,
-					],
-					'~(?_>\s\buse\b\s*)\K((?_>\s*,?\s*(?!\()\b\w+\b)+)(\s*)(;?)((?_>\{[^}]+\})?)~'),
-					//					                1               2   3          4
-					//							       name                 ;         item
-				],
+				//	use in class for trait related
+				$match[4] = preg_replace_callback($this->useInClassSelector,
 				function ($found)
 				{
-					$found[1] = $this->package->generateAlias($found[1]);
+					$found[1] = $this->generateAlias($found[1]);
 					$found[3] = '';
 					
 					if ($found[4] == '') $found[2] = ';' . $found[2];
-					else $found[4] = preg_replace_callback(
-					[
-						//	trait item part
-						str_replace(
-						[
-							'\s*',
-							'?_>',
-						],
-						[
-							self::CommentEscape,
-							self::PhpClosingTag,
-						],
-						'~(?_>\{?\s*)\K((?_>\b[\w:.]+\b))(\s\s*)((?_>\b\w+\b\s*,?\s*)+)(;?)~'),
-						//					  1		        2           3               4
-						//					name                      name              ;
-					],
-					function ($got)
+					else
 					{
-						$got[3] = str_replace('.', '::', $got[1]) . $got[2] . $got[3];
-						$got[2] = '';
-						$got[1] = '';
-						$got[4] = ';';
-						$got[3] = $this->package->generateAlias($got[3]);
-						$got[0] = '';
-						return implode($got);
+						//	trait item part
+						$found[4] = preg_replace_callback($this->useTraitItemSelector,
+						function ($got)
+						{
+							$got[3] = str_replace('.', '::', $got[1]) . $got[2] . $got[3];
+							$got[2] = '';
+							$got[1] = '';
+							$got[4] = ';';
+							$got[3] = $this->generateAlias($got[3]);
+							$got[0] = '';
+							return implode($got);
+						}
+						, $found[4]);
 					}
-					, $found[4]);
-					
 					$found[0] = '';
 					return implode($found);
 				}
@@ -865,9 +865,9 @@ class Varrefvals
 				$match[3] = $match[3] . $match[4] . $match[5];
 				$match[4] = '';
 				$match[5] = '';
+				$match[3] = $this->generateAlias($match[3]);
 			}
 			
-			$match[3] = $this->package->generateAlias($match[3]);
 			$match[0] = '';
 			return implode($match);
 		}
@@ -877,19 +877,20 @@ class Varrefvals
 	//	process catch part
 	public function processCatchPart (& $file)
 	{
-		$file = preg_replace_callback(
-		[
-			//	catch
-			str_replace('\s*', self::CommentEscape,
-			'~\bcatch\b\s*\(\K([^)]+?)(\s)(\$?)(\b\w+\b)(?=\s*\))~'),
-			//				    1       2    3     4         
-			//				  type           $    name
-		],
+		if (!isset($this->catchSelector))
+		{
+			$this->catchSelector = str_replace('\s*', $this->commentEscape,
+			'~\bcatch\b\s*\(\K([^)]+?)(\s)(\$?)(\b\w+\b)(?=\s*\))~');
+			//					1		2	3		4				
+			//					type		$		name			
+		}
+		
+		$file = preg_replace_callback($this->catchSelector,
 		function ($match)
 		{
-			$this->package->variable[] = $match[4];
+			$this->variable[] = $match[4];
 			$match[3] = '$';
-			$match[1] = $this->package->generateAlias($match[1]);
+			$match[1] = $this->generateAlias($match[1]);
 			$match[0] = '';
 			return implode($match);
 		}
@@ -899,94 +900,35 @@ class Varrefvals
 	//	isolate namespace
 	public function isolateNamespace (& $file)
 	{
-		$file = preg_replace_callback(
-		[
+		if (!isset($this->namespaceSelector))
+		{
 			//	namespace
-			str_replace('\s*', self::CommentEscape,
-			'~\bnamespace\b\s\s*[^;{]+|[^\\\\]\K\bnamespace\b\\\\[^\[(;\s#/]+~'),
-		],
+			$this->namespaceSelector = str_replace('\s*', $this->commentEscape,
+			'~\bnamespace\b\s\s*[^;{]+|[^\\\\]\K\bnamespace\b\\\\[^\[(;\s#/]+~');
+		}
+		
+		$file = preg_replace_callback($this->namespaceSelector,
 		function ($match)
 		{
 			$match[0] = str_replace('.', '::', $match[0]);
-			return $this->package->generateAlias($match[0]);
+			return $this->generateAlias($match[0]);
 		}
 		, $file);
 	}
 	
-	//	isolate interface and trait name
-	public function isolateInterfaceAndTraitName (& $file)
+	//	isolate parts
+	public function isolateParts (& $file)
 	{
 		$file = preg_replace_callback(
-		[
-			str_replace('?_>', self::PhpClosingTag, '~\s\b(?:interface|trait)\s\K(?_>[^{]+)~'),
-		],
+		'~(?|(\s\b(?:class|interface|trait)\b\s)([^{]+)(\{)|()(()<<<[\'"]?(\b\w+\b)[\'"]?[\s\S]+?[\r\n][ \t]*\b\g{-1}\b)|(^|\?>)((?>[^<]+|<(?!\?))*)((?:<\?)?)|(#|//)([^\r\n]*)()|(/\*)((?>[^*]+|\*(?!/))*)(\*/)|(`)([^`]*)(`)|(\')((?>[^\'\\\\]+|\\\[\s\S])*)(\')|(")((?>[^"\\\\]+|\\\[\s\S])*)("))~',
+		//			1								2	 3 |1 2 3				4										|	1				2			3	  |  1		2	   3 |  1				2		3	| 1		2	3 | 1	2							3 | 1	2						 3		
 		function ($match)
 		{
-			return $this->package->generateAlias($match[0]);
-		}
-		, $file);
-	}
-	
-	//	isolate comment
-	public function isolateComment (& $file)
-	{
-		$file = preg_replace_callback(
-		[
-			//	comment
-			'~(?|(#|//)([^\r\n]*)|(/\*)(.*?)\*/)~s',
-			//		1		2	 |	1	 2
-		],
-		function ($match)
-		{
-			return $match[1] . $this->package->generateAlias($match[2]) . (($match[1] == '/*') ? '*/' : '');
-		}
-		, $file);
-	}
-	
-	//	isolate quoted string and backtick
-	public function isolateQuotedText (& $file)
-	{
-		$file = preg_replace_callback(
-		[
-			str_replace('?_>', self::PhpClosingTag,
-			'~(?|(?_>([\'"])(.*?(?<!\\\\)(\\\\\\\\)*)\1)|(`)([^`]*)`)~s'),
-			//			1					2			  1	   2
-		],
-		function ($match)
-		{
-			if ($match[2] === '') return $match[0];
-			return $match[1] . $this->package->generateAlias($match[2]) . $match[1];
-		}
-		, $file);
-	}
-	
-	//	isolate heredoc and nowdoc
-	public function isolateDocString (& $file)
-	{
-		$file = preg_replace_callback(
-		[
-			//	heredoc n nowdoc
-			str_replace('\s*', self::CommentEscape,
-			'~(<<<[\'"]?(\b\w+\b).+?[\r\n][ \t]*\b\g{-1}\b)()(\s*)([,);\]]?)~s'),
-			//  1           2                              3   4      5
-		],
-		function ($match)
-		{
-			return $this->package->generateAlias($match[1]) . ($match[5] ? $match[5] : ';') . $match[4];
-		}
-		, $file);
-	}
-	
-	//	isolate html part
-	public function isolateHtmlPart (& $file)
-	{
-		$file = preg_replace_callback(
-		[
-			str_replace('?_>', self::PhpClosingTag, '~^(?!<\?).+?(?=<\?)|(?<=\?_>).+?(?=<\?)|(?<=\?_>).+?$~s'),
-		],
-		function ($match)
-		{
-			return $this->package->generateAlias($match[0]);
+			if ($match[1] == '#' || $match[1] == '//' || $match[1] == '/*')
+			{
+				return $this->generateAlias($match[0], true);
+			}
+			return ($match[2] === '') ? $match[0] : ($match[1] . $this->generateAlias($match[2]) . $match[3]);
 		}
 		, $file);
 	}
