@@ -35,6 +35,8 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 6. Dot operator for *object* (instance, special variable (`this`, `self`, `static`, `parent`), and class name) needs to be without space next to the property or method name. *Object* can be separated from dot operator on the next line of statement.
 7. Accessing *object*, property, or method name within variable should not be used. Please use `{ expression }` instead.
 
+And of course you need PHP installation to use Varrefvals.
+
 ## Aliases
 
 | No. | Varrefvals code | PHP code |
