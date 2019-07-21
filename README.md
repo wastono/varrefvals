@@ -86,7 +86,7 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 
 ## Conversion
 
-I am not update this section. Please see *sample.var* or *simple.var*. Compile it to see the conversion result.
+**I am not update this section**. Please see *sample.var* or *simple.var* for simple code sample. Compile it to see the conversion result.
 
 | No. | Varrefvals code | PHP code |
 |:---:|---|---|
