@@ -97,7 +97,7 @@ for (-1 < i < 12)
 	echo i
 }
 echo "\n"
-for (0 < j < 10, j += 2)
+for (10 >= j > 0, j -= 2)
 {
 	echo j
 }

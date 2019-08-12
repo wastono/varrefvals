@@ -97,7 +97,7 @@ for ($i = 0; $i < 12; $i++)
 	echo $i;
 }
 echo "\n";
-for ($j = 1; $j < 10; $j += 2)
+for ($j = 10; $j > 0; $j -= 2)
 {
 	echo $j;
 }
