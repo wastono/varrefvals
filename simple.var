@@ -96,3 +96,14 @@ for (-1 < i < 12)
 {
 	echo i
 }
+echo "\n"
+for (0 < j < 10, j += 2)
+{
+	echo j
+}
+echo "\n"
+var y = 10
+for (0 < j < 8, j += 2, y++)
+{
+	echo j + y
+}

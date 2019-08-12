@@ -96,3 +96,14 @@ for ($i = 0; $i < 12; $i++)
 {
 	echo $i;
 }
+echo "\n";
+for ($j = 1; $j < 10; $j += 2)
+{
+	echo $j;
+}
+echo "\n";
+$y = 10;
+for ($j = 1; $j < 8; $j += 2, $y++)
+{
+	echo $j + $y;
+}
