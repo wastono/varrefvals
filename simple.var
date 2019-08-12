@@ -91,3 +91,8 @@ variable8 = function (
 echo variable8(variable5.newProperty1), "\n"
 
 if (!isset(dpost['none'])) echo "none\n"
+
+for (-1 < i < 12)
+{
+	echo i
+}

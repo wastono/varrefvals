@@ -90,7 +90,7 @@ class Var2PhpBase
 	}
 	
 	//	generate alias
-	public function generateAlias (& $part, $forComment = false)
+	public function generateAlias (&$part, $forComment = false)
 	{
 		$alias = $this->generateCode(($forComment ? self::CommentAliasCode : self::ComplexAliasCode), $this->counter++);
 		array_unshift($this->alias, $alias);
@@ -99,13 +99,13 @@ class Var2PhpBase
 	}
 	
 	//	isolate text
-	public function isolateText (& $text)
+	public function isolateText (&$text)
 	{
 		return ($text === '') ? '' : $this->generateCode(self::TextAliasCode, $text);
 	}
 	
 	//	isolate part
-	public function isolatePart (& $part)
+	public function isolatePart (&$part)
 	{
 		if (strpos($part, '\\') !== false) return $this->generateAlias($part);
 		return $this->isolateText($part);
@@ -122,11 +122,11 @@ class Varrefvals extends Var2PhpBase
 		$this->message("Varrefvals (c) 2016 - 2019 Wastono.\n");
 	}
 	
-	private function message ($s) { echo "\n\t", $s; }
+	private function message ($s) { echo "\n", $s; }
 	private function message2 ($s, $nl = "\n")
 	{
 		$now = DateTime::createFromFormat('U.u', microtime(true));
-		echo $nl, "\t", $now->format('Y-m-d H:i:s.u'), "   ", $s;
+		echo $nl, $now->format('Y-m-d H:i:s.u'), "   ", $s;
 	}
 	
 	public function execute ($file = '', $phpBinary = '')
@@ -136,19 +136,17 @@ class Varrefvals extends Var2PhpBase
 			$this->phpBinary = $phpBinary;
 			
 			//	check file
-			//	skip varrefvals.php
-			if ($file == 'varrefvals.php')
+			//	check syntax of .php file
+			if (preg_match('/.*?\.php$/i', $file))
 			{
-				$this->message("skip varrefvals.php file.\n\n");
+				$this->processFile($file);
 				return;
 			}
 			
-			//	execute .php file
-			if (preg_match('/.*?\.php$/i', $file))
+			//	create .php file from .base file
+			if (preg_match('/\.base$/i', $file))
 			{
-				$this->message('Executing ' . $file . "...\n\n");
-				if ($phpBinary) $this->processFile($file, false);
-				else include $file;
+				$this->var2php($file, '.base');
 				return;
 			}
 			
@@ -186,7 +184,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	convert .var file to php file
-	public function var2php ($path)
+	public function var2php ($path, $extension = '.var')
 	{
 		$filename = basename($path);
 		$this->message2('start ' . $filename);
@@ -253,33 +251,36 @@ class Varrefvals extends Var2PhpBase
 		//	24. pairing notation
 		$this->replacePairingNotation($file);
 		
-		//	25. assignment
+		//	25. for
+		$this->processRangeOnFor($file);
+		
+		//	26. assignment
 		$this->processAssignmentPart($file);
 		
-		//	26. aliases
+		//	27. aliases
 		$this->replaceAliases($file);
 		
-		//	27. variable
+		//	28. variable
 		$this->variablilize($file);
 		
-		//	28. dot operator
+		//	29. dot operator
 		$this->replaceDotOperator($file);
 		
-		//	29. isolated part
+		//	30. isolated part
 		$this->restoreIsolatedPart($file);
 		
 		//	write .php file
-		$name = str_replace('.var', '.php', $path);
-		file_put_contents($name , $file);
+		$name = str_replace($extension, '.php', $path);
+		file_put_contents($name, $file);
 		
-		$this->message2("write " . str_replace('.var', '.php', $filename));
+		$this->message2('write ' . str_replace($extension, '.php', $filename));
 		
 		//	check code syntax
 		$this->processFile($name);
 	}
 	
 	//	execute file
-	public function processFile (& $path, $checkSyntaxOnly = true)
+	public function processFile (&$path, $checkSyntaxOnly = true)
 	{
 		if ($this->phpBinary)
 		{
@@ -297,14 +298,14 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	restore isolated part
-	public function restoreIsolatedPart (& $file)
+	public function restoreIsolatedPart (&$file)
 	{
 		if ($this->alias) $file = str_replace($this->alias, $this->part, $file);
 		$file = preg_replace($this->textOnlySelector, '$1', $file);
 	}
 	
 	//	terminate statement
-	public function terminateStatement (& $file)
+	public function terminateStatement (&$file)
 	{
 		if (!isset($this->dummyTerminator))
 		{
@@ -385,7 +386,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	replace dot operator
-	public function replaceDotOperator (& $file)
+	public function replaceDotOperator (&$file)
 	{
 		if (!isset($this->dotOperatorSelector))
 		{
@@ -428,7 +429,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	variablilize
-	public function variablilize (& $file)
+	public function variablilize (&$file)
 	{
 		if (!isset($this->reservedSelector))
 		{
@@ -457,7 +458,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	replace aliases
-	public function replaceAliases (& $file)
+	public function replaceAliases (&$file)
 	{
 		$file = preg_replace(
 		[
@@ -516,7 +517,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	process assignment part
-	public function processAssignmentPart (& $file)
+	public function processAssignmentPart (&$file)
 	{
 		if (!isset($this->assignmentPartSelector))
 		{
@@ -537,8 +538,38 @@ class Varrefvals extends Var2PhpBase
 		, $file);
 	}
 	
+	//	process range on for
+	public function processRangeOnFor (&$file)
+	{
+		if (!isset($this->rangeOnForSelector))
+		{
+			$this->rangeOnForSelector = 
+			'~\bfor\s*\(\s*\K([^<=>]+?)(\s*)([<>])([=]?)(\s*)([^<=>\s]+?)(\s*)([<>][=]?[^),]+)(,?)(\s*)([^)]*)(?=\))~';
+			//					1		2		3	4	5		6		7		8			 	9	10	11			
+			//					0				<=				j			<=		5			,	j += 2			
+		}
+		$file = preg_replace_callback($this->rangeOnForSelector,
+		function ($match)
+		{
+			$up = ($match[3] == '<');
+			if (preg_match('~^-?[ \t]*\d+$~', $match[1]))	//	number
+			{
+				$match[1] = $match[6] . ' = ' . ($match[4] ? $match[1] : (str_replace([' ', "\t"], '', $match[1]) + ($up ? 1 : -1))) . ';';
+			}
+			else $match[1] = $match[6] . ' = ' . $match[1] . ($match[4] ? ';' : ($up ? ' + 1;' : ' - 1;'));
+			if ($match[9] == '')  $match[10] = ' ' . $match[6] . ($up ? '++' : '--');
+			$match[2] = '';
+			$match[3] = '';
+			$match[4] = '';
+			$match[9] = ';';
+			$match[0] = '';
+			return implode($match);
+		}
+		, $file);
+	}
+	
 	//	replace pairing notation
-	public function replacePairingNotation (& $file)
+	public function replacePairingNotation (&$file)
 	{
 		if (!isset($this->pairingNotationSelector))
 		{
@@ -552,7 +583,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	process foreach as part
-	public function processForeachAsPart (& $file)
+	public function processForeachAsPart (&$file)
 	{
 		if (!isset($this->foreachAsSelector))
 		{
@@ -582,7 +613,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	process list part
-	public function processListPart (& $file)
+	public function processListPart (&$file)
 	{
 		if (!isset($this->listSelector))
 		{
@@ -616,7 +647,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	process variable intro
-	public function processVariableIntro (& $file)
+	public function processVariableIntro (&$file)
 	{
 		if (!isset($this->variableIntroSelector))
 		{
@@ -686,7 +717,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	remove digit space
-	public function removeDigitSpace (& $file)
+	public function removeDigitSpace (&$file)
 	{
 		if (!isset($this->digitSpaceSelector))
 		{
@@ -702,7 +733,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	process function and fn part
-	public function processFunctionAndFnPart (& $file)
+	public function processFunctionAndFnPart (&$file)
 	{
 		if (!isset($this->functionAndFnSelector))
 		{
@@ -731,7 +762,7 @@ class Varrefvals extends Var2PhpBase
 				if ($found[4])
 				{
 					$found[4] = preg_replace(
-					['~\bvals\b[ \t]*~', '~\brefs\b[ \t]*~', '~\bref\b[ \t]*~'],
+					['~\bvals[ \t]+~', '~\brefs[ \t]+~', '~\bref[ \t]+~'],
 					['...', '&...', '&'], $found[4]);
 				}
 				
@@ -798,7 +829,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	process use part
-	public function processUsePart (& $file)
+	public function processUsePart (&$file)
 	{
 		if (!isset($this->usePartSelector))
 		{
@@ -876,7 +907,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	process catch part
-	public function processCatchPart (& $file)
+	public function processCatchPart (&$file)
 	{
 		if (!isset($this->catchSelector))
 		{
@@ -899,7 +930,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	isolate namespace
-	public function isolateNamespace (& $file)
+	public function isolateNamespace (&$file)
 	{
 		if (!isset($this->namespaceSelector))
 		{
@@ -918,7 +949,7 @@ class Varrefvals extends Var2PhpBase
 	}
 	
 	//	isolate parts
-	public function isolateParts (& $file)
+	public function isolateParts (&$file)
 	{
 		$file = preg_replace_callback(
 		'~(?|(\s\b(?:class|interface|trait)\b\s)([^{]+)(\{)|()(()<<<[\'"]?(\b\w+\b)[\'"]?[\s\S]+?[\r\n][ \t]*\b\g{-1}\b)|(^|\?>)((?>[^<]+|<(?!\?))*)((?:<\?)?)|(#|//)([^\r\n]*)()|(/\*)((?>[^*]+|\*(?!/))*)(\*/)|(`)([^`]*)(`)|(\')((?>[^\'\\\\]+|\\\[\s\S])*)(\')|(")((?>[^"\\\\]+|\\\[\s\S])*)("))~',
@@ -935,6 +966,5 @@ class Varrefvals extends Var2PhpBase
 	}
 }
 
-;
 $varrefvals = new Varrefvals;
 $varrefvals->execute($argv[1], isset($argv[2]) ? $argv[2] : '');

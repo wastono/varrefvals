@@ -79,7 +79,7 @@ list($d, $e) = ['d', 'e'];
 echo $d, $e, $f, $g, $h, $i, "\n";
 
 $variable8 = function (
-	& $x,
+	&$x,
 	$y = 0.123456,
 	$z = [1.2, 3.4, 5.6]
 ) use ($d) :int
@@ -91,3 +91,8 @@ $variable8 = function (
 echo $variable8($variable5->newProperty1), "\n";
 
 if (!isset($_POST['none'])) echo "none\n";
+
+for ($i = 0; $i < 12; $i++)
+{
+	echo $i;
+}
