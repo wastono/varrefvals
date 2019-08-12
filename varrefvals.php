@@ -22,7 +22,7 @@
 	
 */
 
-//	Varrefvals version 2.0
+//	Varrefvals version 2.1
 
 class Var2PhpBase
 {
