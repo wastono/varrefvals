@@ -344,7 +344,7 @@ class Varrefvals extends Var2PhpBase
 			. '(\((?:(?>[^()]+)|(?-1))*\))\s*(?:->|::|[\[.(])'
 			. '|(\[(?:(?>[^\[\]]+)|(?-1))*\])\s*[=(]'
 			. '|\$?\b(?!(?i:as|instanceof|insteadof|and|x?or)\b|' . $this->commentSelector . '\b)\w+\b'
-			. '|[\'"`$]'
+			. '|[@\'"`$]'
 			. '|\+\+|--'
 			. ')'
 			. '))~'
