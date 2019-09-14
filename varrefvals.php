@@ -115,6 +115,7 @@ class Var2PhpBase
 class Varrefvals extends Var2PhpBase
 {
 	private $phpBinary;
+	private $errorFileCounter = 0;
 	
 	public function __construct ()
 	{
@@ -153,6 +154,7 @@ class Varrefvals extends Var2PhpBase
 			//	empty argument: find all .var file, recursively
 			if ($file == '')
 			{
+				$this->errorFileCounter = 0;
 				$dir = getcwd();
 				foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir)) as $path)
 				{
@@ -162,6 +164,8 @@ class Varrefvals extends Var2PhpBase
 						$this->var2php($path);
 					}
 				}
+				$many = $this->errorFileCounter > 1;
+				if ($this->errorFileCounter) $this->message('There ' . ($many ? ('are ' . $this->errorFileCounter . ' files') : 'is a file') . ' with syntax error.');
 				$this->message("That's all in " . $dir . "\n");
 				return;
 			}
@@ -291,6 +295,7 @@ class Varrefvals extends Var2PhpBase
 				$output = [];
 				exec($command, $output);
 				$this->message2("finish", '');
+				if (count($output) > 1) $this->errorFileCounter++;
 				$this->message(array_slice($output, -1)[0] . "\n");
 			}
 			else system($command);
