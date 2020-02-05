@@ -107,7 +107,7 @@ class Var2PhpBase
 	//	isolate part
 	public function isolatePart (&$part)
 	{
-		if (strpos($part, '\\') !== false) return $this->generateAlias($part);
+		if (preg_match('~[\\\\|/:]~', $part)) return $this->generateAlias($part);
 		return $this->isolateText($part);
 	}
 }
@@ -270,7 +270,13 @@ class Varrefvals extends Var2PhpBase
 		//	29. dot operator
 		$this->replaceDotOperator($file);
 		
-		//	30. isolated part
+		//	30. unused terminator
+		$this->removeUnusedTerminator($file);
+		
+		//	31. switch cases
+		$this->processSwitchCases($file);
+		
+		//	32. isolated part
 		$this->restoreIsolatedPart($file);
 		
 		//	write .php file
@@ -309,6 +315,67 @@ class Varrefvals extends Var2PhpBase
 		$file = preg_replace($this->textOnlySelector, '$1', $file);
 	}
 	
+	//	process switch cases
+	public function processSwitchCases (&$file)
+	{
+		if (!isset($this->processSwitchCasesSelector))
+		{
+			$this->processSwitchCasesSelector =
+			[
+				str_replace('\s*', $this->commentEscape,
+				'~([ \t]*)(\b(?:case|default)\b\s*[^\r\n]+)~'),
+				//	1			2
+				//	space		case / default           ;
+			];
+		}
+		$file = preg_replace_callback($this->processSwitchCasesSelector,
+		function ($match)
+		{
+			// var_dump(match)
+			$match[0] = str_replace(';', ':', $match[0]);
+			$match[0] = preg_replace('~\s*,\s*~', ":\r\n" . $match[1] . 'case ', $match[0]);
+			
+			$match[0] = preg_replace_callback('~(\d+)\s*-\s*(\d+)~',
+			function ($found) use ($match)
+			{
+				if ($found[1] > $found[2])
+				{
+					$x = $found[1];
+					$found[1] = $found[2];
+					$found[2] = $x;
+				}
+				$found[0] = '';
+				for ($i = $found[1]; $i < $found[2]; $i++)
+				{
+					$found[0] .= $i . ":\r\n" . $match[1] . 'case ';
+				}
+				return $found[0] . $found[2];
+			}, $match[0]);
+			return $match[0];
+		}
+		, $file);
+	}
+	
+	//	remove unused terminator
+	public function removeUnusedTerminator (&$file)
+	{
+		if (!isset($this->removeUnusedTerminatorSelector))
+		{
+			$this->removeUnusedTerminatorSelector =
+			[
+				str_replace('\s*', $this->commentEscape, '~[{;]\s*\K;~'),
+				
+				str_replace('\s*', $this->commentEscape,
+				'~\}\s*\K;(?=\s*(?:(?:var|public|static|private|protected|function)\s*)+)~'),
+				
+				str_replace(['\s*', '\c*'], [$this->commentEscape, $this->codeEscape],
+				'~[^=\s]\s*(?:public|static|private|protected|function)[^(]+(\((?:(?>[^()]+)|(?-1))*\))\s*:?\s*\??\s*(?:\c*(?>[\w\\\\|/]+)?)\s*(\{(?:(?>[^{}]+)|(?-1))*\})\s*\K;~'),
+				//	not =						beginner of method			 	name to argument	   return type   					    	 method body				   ;
+			];
+		}
+		$file = preg_replace($this->removeUnusedTerminatorSelector, '', $file);
+	}
+	
 	//	terminate statement
 	public function terminateStatement (&$file)
 	{
@@ -333,7 +400,7 @@ class Varrefvals extends Var2PhpBase
 			
 			//	expression ; \r\n expression
 			$this->betweenExpressionTerminatorSelector = str_replace(['\s*', '\t*', '\reserved'],
-			[$this->commentEscape, $this->commentEscape2, str_replace(['|null|', '|true|', '|false|', '|stdclass|'], '|', self::Reserved)],
+			[$this->commentEscape, $this->commentEscape2, str_replace(['|null|', '|true|', '|false|', '|stdclass|', '|default|'], '|', self::Reserved)],
 			'~(?'
 			. '|(?:->|::|\.)(?|\s*(\{(?:(?>[^{}]+)|(?-1))*\})|\bclass\b())'
 			. '|\$?\b(?!(?i:\reserved)\b|' . $this->commentSelector . '\b)\w+\b()'
@@ -428,6 +495,7 @@ class Varrefvals extends Var2PhpBase
 			}
 			
 			//	instance.
+			$match[0] = preg_replace('~\.class\b~', '::class', $match[0]);
 			return str_replace('.', '->', $match[0]);
 		}
 		, $file);
@@ -663,14 +731,14 @@ class Varrefvals extends Var2PhpBase
 			//			keyword					$name		, tail				 ;	
 			
 			//	properties, variable declaration
-			. '|()(\b(?:var|public|private|protected|static)\b[ \t]+(?:\b(?:public|private|protected|static)\b[ \t]+)?)(\??[ \t]*)((?:[\\\\]?\c*\b[\w\\\\]+\b)?)([ \t]*)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;]*)*)((?:\s*;)?)'
-			//	1		2																									3						4				5		6									   7	
-			//			keyword																								?						type					$name			, tail				   ;	
+			. '|()(\b(?:var|public|private|protected|static)\b[ \t]+(?:\b(?:public|private|protected|static)\b[ \t]+)?)(\??[ \t]*)((?:[\\\\]?\c*\b[\w\\\\|/]+\b)?)([ \t]*)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;]*)*)((?:\s*;)?)'
+			//	1		2																									3						4				5		6									     7	
+			//			keyword																								?						type					$name			, tail				     ;	
 			
 			//	bare properties
-			. '|((?:(?:\S\s*)?[\r\n]+|[\r\n{};])[ \t]*)()(\??[ \t]*)([\\\\]?\c*\b[\w\\\\]+\b)([ \t]+)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;]*)*)((?:\s*;)?))~');
-			//			1								2	3						4			5			6									7		
-			//			check								?						type					$name			, tail				;		
+			. '|((?:(?:\S\s*)?[\r\n]+|[\r\n{};])[ \t]*)()(\??[ \t]*)([\\\\]?\c*\b[\w\\\\|/]+\b)([ \t]+)(\$?\b\c*\w+\b(?:\s*[=,]\s*[^,;]*)*)((?:\s*;)?))~');
+			//			1								2	3						4			  5			6									  7		
+			//			check								?						type					$name			, tail				  ;		
 			
 			$this->lastCommandEscapeSelector = '~('. $this->commentEscape . ')$~';
 			$this->variableIntroItemSelector = str_replace(['\s*', '\c*'], [$this->commentEscape, $this->codeEscape2],
@@ -687,6 +755,7 @@ class Varrefvals extends Var2PhpBase
 			$directIntro = substr($match[2], 0, 3) == 'var' && $match[4] === '';
 			if ($directIntro) $match[2] = ltrim(substr($match[2], 3));
 			
+			$match[4] = str_replace('/', '|', $match[4]);
 			$match[4] = $this->isolatePart($match[4]);
 			
 			//	put ; sign
@@ -743,14 +812,14 @@ class Varrefvals extends Var2PhpBase
 		if (!isset($this->functionAndFnSelector))
 		{
 			$this->functionAndFnSelector = str_replace(['\s*', '\c*'], [$this->commentEscape, $this->codeEscape2],
-			'~(?>(\bf(?:unctio)?n\b)(\s*)((?:\bref\b|&)?)(\s*)((?:\c*\b(?>\w+)\b)?)(\s*)(\((?:(?>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))([ \t]*)(:?)([ \t]*)(\??)([ \t]*)((?:\c*(?>[\w\\\\]+))?)(\s*)([{;:=]?))~');
-			//			1			  2			3			4			5			6							7						8	  9		10		11	12				13			  14	15			
-			//			fn						&						name								argument						  :				?					type				tail		
+			'~(?>(\bf(?:unctio)?n\b)(\s*)((?:\bref\b|&)?)(\s*)((?:\c*\b(?>\w+)\b)?)(\s*)(\((?:(?>[^()]+)|\)\s*\buse\b\s*\(|(?-1))*\))([ \t]*)(:?)([ \t]*)(\??)([ \t]*)((?:\c*(?>[\w\\\\|/]+))?)(\s*)([{;:=]?))~');
+			//			1			  2			3			4			5			6							7						8	  9		10		11	12				13			    14	  15			
+			//			fn						&						name								argument						  :				?					type				  tail		
 			
 			$this->argumentSelector = str_replace(['\s*', '\c*', '\q*'], [$this->commentEscape, $this->codeEscape, $this->codeEscape2],
-			'~(?>([\(,]\s*\??\s*)((?>\c*[\w\\\\]+)?)(\s*&?\s*)((?:\bvals\b|\brefs?\b)?)(\s*[.]*\s*)(\$?)(\q*\b\w+\b)((?:\s*=\s*(?:[^,\[({)]+|(\[(?:(?>[^\[\]]+)|(?-1))*\])|(\((?:(?>[^()]+)|(?-1))*\))|(\{(?:(?>[^{}]+)|(?-1))*\}))+)?))~');
-			//			1					2			3				4					5		 6			7			8							9							10								11						
-			//			(, ?				type		&				ref					...		 $			name		tail																											
+			'~(?>([\(,]\s*\??\s*)((?>\c*[\w\\\\|/]+)?)(\s*&?\s*)((?:\bvals\b|\brefs?\b)?)(\s*[.]*\s*)(\$?)(\q*\b\w+\b)((?:\s*=\s*(?:[^,\[({)]+|(\[(?:(?>[^\[\]]+)|(?-1))*\])|(\((?:(?>[^()]+)|(?-1))*\))|(\{(?:(?>[^{}]+)|(?-1))*\}))+)?))~');
+			//			1					2			3				4					5		  6			7			8							9							10								11						
+			//			(, ?				type		&				ref					...		  $			name		tail																											
 		}
 		
 		$file = preg_replace_callback($this->functionAndFnSelector,
@@ -761,6 +830,7 @@ class Varrefvals extends Var2PhpBase
 			function ($found)
 			{
 				//	variable type
+				$found[2] = str_replace('/', '|', $found[2]);
 				$found[2] = $this->isolatePart($found[2]);
 				
 				//	reference
@@ -791,13 +861,19 @@ class Varrefvals extends Var2PhpBase
 			
 			if ($match[1] == 'fn')
 			{
-				if ($match[13])	//	return type
+				if ($match[9] == '' && $match[15] == '') $match[9] = '=> ';
+				else if ($match[13])	//	return type
 				{
 					if ($match[15] == ':')	//	tail
 					{
 						$isolateReturnType = true;
 						$match[15] = '=>';
-						$match[9] = ':';
+						$match[13] = ':' . $match[10] . $match[11] . $match[12] . $match[13];
+						
+						$match[9] = '';
+						$match[10] = '';
+						$match[11] = '';
+						$match[12] = '';
 					}
 					else if ($match[15] == '=')
 					{
@@ -825,8 +901,11 @@ class Varrefvals extends Var2PhpBase
 					$isolateReturnType = true;
 				}
 			}
-			if ($isolateReturnType) $match[13] = $this->isolatePart($match[13]);
-			
+			if ($isolateReturnType)
+			{
+				$match[13] = str_replace('/', '|', $match[13]);
+				$match[13] = $this->isolatePart($match[13]);
+			}
 			$match[0] = '';
 			return implode($match);
 		}

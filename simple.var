@@ -4,13 +4,21 @@ var variable1 = 0
 variable2 = 1 000
 variable3[] = 'array'
 
+var x = [1, 2, 3]
+var y = [0, ref x, 4]
+
+var_dump(y)
+
 class ClassName
 {
-	//	int property1
-	//	var string property2
+	;
+	var int tes = 0xDF FD DD 
 	
-	//	private float property3, property4 = 0.0
-	//	protected int property5 = 10 000 000, property6 = 1 000 00
+	var string property2
+	var int property1
+	
+	private float property3, property4 = 0.0
+	protected int property5 = 10 000 000, property6 = 1 000 00
 	
 	public static property7
 	public property8 = [ 'one' : 1, 'two' : 2 ]
@@ -22,6 +30,9 @@ class ClassName
 		self.method2()
 	}
 	
+	;
+	
+	var int dd = 0
 	public static function method2 () string
 	{
 		echo 'this is content of property 7: ' . self.property7 . "\n"
@@ -33,6 +44,7 @@ class ClassName
 		global variable3
 		echo variable3[0], "\n"
 	}
+	;
 }
 
 ClassName.property7 = 'just string'
@@ -43,6 +55,8 @@ variable4.method3()
 variable4.{'method3'}()
 
 echo ClassName.Constant1, "\n", ClassName.class, "\n"
+//	, variable4.class, "\n"	//	next on php 8
+
 var_dump(variable4.property8)
 
 variable5 = {}
@@ -58,7 +72,7 @@ echo variable5
 
 try
 {
-	//	variable6 = fn (a) : return a * a
+	variable6 = fn (a) : a * a
 	variable7 = function (b) int { return b * b }
 	echo variable7(30), "\n"
 }
@@ -107,3 +121,46 @@ for (0 < j < 8, j += 2, y++)
 {
 	echo j + y
 }
+
+var f = fn (xx) int : xx * 8
+var f = fn (xx) 8 * 8
+var f = fn (xx) xx * 8
+
+var f = preg_replace_callback('~.~', function (match)
+{
+	var_dump(match)
+}, 'testing')
+
+var f = preg_replace_callback('~.~', fn (match) var_dump(match), 'testing')
+var f = preg_replace_callback('~.~', fn (match) string : match[0], 'testing')
+var f = preg_replace_callback('~.~', fn (match) ?string : match[0], 'testing')
+
+/*
+int|string ss = 'as'
+int/string ss = 'as'
+//	next on php 8
+//*/
+
+switch (x)
+{
+	case 1
+		echo 1
+		break
+	
+	case 2, 3
+		echo 2
+		break
+	
+	case 4 - 6
+		echo 4
+		break
+	
+	case 12 - 6
+		echo 4
+		break
+	
+	default
+		echo 'akhir'
+}
+
+
