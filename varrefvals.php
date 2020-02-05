@@ -5,7 +5,7 @@
 /*
 	
     Varrefvals. Simple code compiler for PHP code written without $ => :: -> ; signs.
-    Copyright (C) 2016 - 2019 Wastono
+    Copyright (C) 2016 - 2020 Wastono
 	
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,7 @@
 	
 */
 
-//	Varrefvals version 2.1
+//	Varrefvals version 2.2
 
 class Var2PhpBase
 {
@@ -120,7 +120,7 @@ class Varrefvals extends Var2PhpBase
 	public function __construct ()
 	{
 		ob_implicit_flush(1);
-		$this->message("Varrefvals (c) 2016 - 2019 Wastono.\n");
+		$this->message("Varrefvals (c) 2016 - 2020 Wastono.\n");
 	}
 	
 	private function message ($s) { echo "\n", $s; }

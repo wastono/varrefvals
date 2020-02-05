@@ -25,6 +25,8 @@ Varrefvals is a simple helper to write PHP codes. All PHP rules are apply to Var
 13. Keyword `vals` can be used for declaring *expressions* accessed by value.
 14. Some *predefined variables* and *magic constants* are aliased.
 15. Mathematical range notation can be used on keyword `for` expressions.
+16. Simple `switch` cases with range and without `:` sign.
+17. Support union of types using `/` sign.
 
 ## Needs
 
@@ -173,7 +175,7 @@ If you add an argument *path/to/binary/of/php*, the syntax of generated .php fil
 
 ```
     Varrefvals. Simple code compiler for PHP code written without $ => :: -> ; signs.
-    Copyright (C) 2016 - 2019 Wastono
+    Copyright (C) 2016 - 2020 Wastono
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
